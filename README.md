@@ -2,4 +2,6 @@
 
 Painel de demandas de comunicação (FAF e Prefeitura de Boca da Mata): quadro, agenda, calendário, equipe, relatórios e leitura de pedidos por foto ou texto.
 
-O arquivo `index.html` é a versão publicada dentro do Claude e usa os recursos de lá (banco de dados, anexos e IA). Fora do Claude ele abre em modo local, sem sincronização entre aparelhos.
+- `index.html`: versão atual do painel. Roda dentro do Claude; fora dele abre em modo local, sem sincronização.
+- `docs/PLANO.md`: plano para colocar o Demandô no ar em servidor próprio.
+- `supabase/schema.sql`: esquema do banco (Supabase).
