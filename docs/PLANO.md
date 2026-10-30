@@ -14,7 +14,9 @@ notificações no celular e instalação como app (iPhone e Android) pelo navega
 | Notificação no celular | Web Push (PWA) | Chega com o celular bloqueado |
 | Instalação | PWA (manifesto, ícone do "ô", service worker) | Instala pelo navegador |
 
-**Quem entra:** cada pessoa com o próprio e-mail (código de 6 dígitos). Três papéis: `admin`, `membro` e `leitor`
+**Quem entra:** cada pessoa com um **usuário e senha** (ex.: `juninho`). Por trás, o app converte o usuário num e-mail interno
+(`juninho@usuarios.demando.app`), que nunca recebe mensagem. Só o admin cria contas (cadastro livre fechado, senha mínima de 8).
+Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `membro` e `leitor`
 (ex.: Gustavo, Júnior e Mariana acompanhando o Life). O acesso é por área. Acabam as senhas compartilhadas.
 
 ## Fases
@@ -63,7 +65,7 @@ subo as funções e configuro o que for preciso.
 
 ## Decisões em aberto
 
-- Login: e-mail com código (padrão, sem configuração extra) ou também Google?
+- Login: decidido, usuário e senha. Google pode ser somado depois.
 - Endereço: GitHub Pages ou domínio próprio?
 - Supabase: gratuito no começo ou já o Pro?
 - Life: Gustavo, Júnior e Mariana entram como `leitor` (só acompanham)?
