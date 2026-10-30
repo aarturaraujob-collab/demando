@@ -118,9 +118,9 @@ async def main():
         sql("delete from public.demandas where titulo like 'FULL-%' or id like 'tst-%'"); sql("delete from public.recorrentes where titulo like 'FULL-%'"); sql("delete from public.areas where nome like 'FULL-%'")
         for u in sql("select id from public.pessoas where usuario='tst.full'"): requests.delete(f"{BASE}/auth/v1/admin/users/{u['id']}", headers=SV)
         for f in requests.post(f"{BASE}/storage/v1/object/list/anexos", headers=SV, json={"prefix":"","limit":100}).json() if False else []: pass
-        left=sql("select name from storage.objects where bucket_id='anexos'")
+        left=sql("select name from storage.objects where bucket_id='anexos' and name not like 'migracao/%'")   # só o que o teste enviou: os anexos migrados ficam
         if left: requests.delete(f"{BASE}/storage/v1/object/anexos", headers=SV, json={"prefixes":[x['name'] for x in left]})
-        print("\nLimpeza →", sql("select (select count(*) from auth.users) users, (select string_agg(usuario||':'||papel, ', ') from public.pessoas) pessoas, (select count(*) from public.demandas) demandas, (select count(*) from public.recorrentes) rec, (select count(*) from public.areas where not padrao) areas_extra, (select count(*) from storage.objects where bucket_id='anexos') arquivos"))
+        print("\nLimpeza →", sql("select (select count(*) from auth.users) users, (select string_agg(usuario||':'||papel, ', ') from public.pessoas) pessoas, (select count(*) from public.demandas) demandas, (select count(*) from public.recorrentes) rec, (select count(*) from public.areas where not padrao) areas_extra, (select count(*) from storage.objects where bucket_id='anexos' and name not like 'migracao/%') arquivos_do_teste"))
         print("erros de JS:", errs); print(f"RESULTADO: {sum(res)} de {len(res)} verificações passaram")
         await b.close()
 asyncio.run(main())

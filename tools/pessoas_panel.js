@@ -17,10 +17,11 @@
     const papel = el("select",{"data-papel":pe.usuario, disabled: eu ? "" : false}, ...[["admin","Admin"],["membro","Membro (cria e muda)"],["leitor","Leitor (só acompanha)"]].map(([v,t]) => el("option",{value:v}, t)));
     papel.value = pe.papel; papel.addEventListener("change", () => st.papel = papel.value);
     const ativo = el("input",{type:"checkbox", "data-ativo":pe.usuario, disabled: eu ? "" : false}); ativo.checked = pe.ativo; ativo.addEventListener("change", () => st.ativo = ativo.checked);
+    const nomeEq = el("input",{type:"text", maxlength:"30", placeholder:"Ex.: " + String(pe.nome).split(" ")[0], "data-nomeeq":pe.usuario}); nomeEq.value = pe.nome_equipe || "";
     const salvar = el("button",{type:"button", class:"btn pri", "data-salvar":pe.usuario}, "Salvar");
     salvar.addEventListener("click", async () => {
       salvar.disabled = true;
-      const e1 = await sbc.from("pessoas").update({papel:st.papel, ativo:st.ativo}).eq("id", pe.id);
+      const e1 = await sbc.from("pessoas").update({papel:st.papel, ativo:st.ativo, nome_equipe:(nomeEq.value.trim() || null)}).eq("id", pe.id);
       const novas = [...st.areas].filter(a => !tem.includes(a)), tiradas = tem.filter(a => !st.areas.has(a));
       const e2 = novas.length ? await sbc.from("acessos").insert(novas.map(a => ({pessoa_id:pe.id, area_id:a}))) : {};
       const e3 = tiradas.length ? await sbc.from("acessos").delete().eq("pessoa_id", pe.id).in("area_id", tiradas) : {};
@@ -44,6 +45,7 @@
     return el("div",{class:"rw dm" + (pend ? " today" : ""), style:"flex-direction:column;align-items:stretch;gap:12px;cursor:default", "data-pessoa":pe.usuario},
       el("div",null, el("b",{style:"font-size:16px"}, pe.nome, pend ? el("span",{class:"novo", style:"margin-left:8px"}, "Aguardando") : null), el("div",{class:"hint"}, "@" + pe.usuario)),
       el("label",{class:"fl"}, "Papel", papel),
+      el("label",{class:"fl"}, "Nome na equipe (pras notificações de escala)", nomeEq),
       el("div",null, el("p",{class:"sec-l"}, "Áreas"), el("div",{class:"pills", style:"gap:10px"}, ...areaIds().map(k => {
         const c = el("input",{type:"checkbox", "data-area":k, style:"width:22px;height:22px;min-height:0"}); c.checked = st.areas.has(k);
         c.addEventListener("change", () => c.checked ? st.areas.add(k) : st.areas.delete(k));

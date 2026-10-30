@@ -5,7 +5,7 @@
 "use strict";
 const CFG = window.DEMANDO;
 const sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
-const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sair: async () => { try { await sb.auth.signOut(); } catch(e){} location.reload(); } };
+const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sair: async () => { try { if (API.sinoSair) await API.sinoSair(); await sb.auth.signOut(); } catch(e){} location.reload(); } };
 let UID = null;
 
 /* ---------- utilidades ---------- */
@@ -196,6 +196,38 @@ function dicaInstalar(){
 }
 function telaAviso(titulo, texto, extra){ tela(h("h2", null, titulo), h("p", { class:"gs" }, texto), ...(extra || []), h("button", { class:"s", id:"g-sair", type:"button", onclick:API.sair }, "Sair")); }
 
+
+/* ---------- notificações no celular (sininho) ---------- */
+function iniciarSino(){
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window) || !CFG.vapid) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const st = document.createElement("style");
+  st.textContent = '#sino{position:absolute;z-index:30;width:40px;height:40px;border-radius:14px;border:0;display:grid;place-items:center;background:var(--surface,#fff);color:var(--muted,#5E6B66);box-shadow:0 1px 2px rgba(18,26,23,.06),0 8px 24px rgba(18,26,23,.06);cursor:pointer}#sino.on{background:var(--ink,#121A17);color:var(--bg,#F3F4F1)}#sino svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.mtop #sino{right:64px;top:50%;transform:translateY(-50%)}.side #sino{right:12px;top:22px}#sinoT{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--ink,#121A17);color:var(--bg,#F3F4F1);padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:99;max-width:88vw;text-align:center}';
+  document.head.append(st);
+  const b = document.createElement("button"); b.id = "sino"; b.type = "button"; b.setAttribute("aria-label", "Notificações neste aparelho");
+  b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/></svg>';
+  const dica = txt => { let t = document.getElementById("sinoT"); if (!t){ t = document.createElement("div"); t.id = "sinoT"; document.body.append(t); } t.textContent = txt; t.hidden = false; clearTimeout(t._x); t._x = setTimeout(() => t.hidden = true, 4200); };
+  const alvo = () => (window.innerWidth <= 860 ? document.querySelector(".mtop") : document.querySelector(".side")) || document.body;
+  const pos = () => { const t = alvo(); if (b.parentNode !== t) t.append(b); };
+  const urlB64 = s => { const p = "=".repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+  const marca = on => { b.classList.toggle("on", on); b.title = on ? "Notificações ligadas neste aparelho (toque pra desligar)" : "Ligar notificações neste aparelho"; };
+  const salvar = async s => { const j = s.toJSON(); const r = await sb.from("push_subs").upsert({ pessoa_id:UID, endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth }, { onConflict:"endpoint" }); if (r.error) throw r.error; };
+  API.sinoSair = async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s){ await sb.from("push_subs").delete().eq("endpoint", s.endpoint); } } catch(e){} };
+  b.addEventListener("click", async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready, atual = await reg.pushManager.getSubscription();
+      if (atual){ await sb.from("push_subs").delete().eq("endpoint", atual.endpoint); await atual.unsubscribe(); marca(false); dica("Notificações desligadas neste aparelho"); return; }
+      if (ios && !standalone){ dica("No iPhone, instale o app (Compartilhar → Adicionar à Tela de Início) e ative por ele."); return; }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted"){ dica("As notificações estão bloqueadas. Libere nas configurações do navegador."); return; }
+      const s = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(CFG.vapid) });
+      await salvar(s); marca(true); dica("Notificações ativadas neste aparelho");
+    } catch(e){ dica("Não deu pra ativar as notificações agora."); }
+  });
+  pos(); window.addEventListener("resize", pos); setTimeout(pos, 800);
+  (async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s && Notification.permission === "granted"){ await salvar(s); marca(true); } else marca(false); } catch(e){ marca(false); } })();
+}
+
 /* ---------- depois de entrar ---------- */
 async function seguir(){
   tela(h("p", { class:"gs" }, "Carregando…"));
@@ -217,6 +249,7 @@ async function seguir(){
   document.body.classList.toggle("sem-voltar", admin || visiveis.length < 2); document.body.classList.toggle("e-admin", admin);
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
   const s = document.createElement("script"); s.textContent = document.getElementById("appcode").textContent; document.body.append(s);
+  iniciarSino();
 }
 (async () => { const { data: { session } } = await sb.auth.getSession(); if (session) seguir(); else telaEntrar(); })();
 })();
