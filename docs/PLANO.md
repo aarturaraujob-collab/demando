@@ -28,10 +28,10 @@ Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `memb
 - [x] **2. Banco:** esquema rodado e testado (`supabase/tests/rls_test.py`): 9 tabelas com RLS, papéis admin, membro e leitor, e anexos privados.
 - [x] **2b. Login:** usuário e senha, cadastro fechado no Supabase, função `criar-perfil` publicada e testada (`supabase/tests/cadastro_test.py`).
 - [ ] **2c. Primeiros admins (eu):** criar as contas de admin e liberar a equipe conforme os perfis forem criados.
-- [x] **3a. App v1 (`/app`):** entrar, criar perfil, lista ao vivo, criar, editar e mover demandas, tela de pessoas do admin. Testado de ponta a ponta (`tests/app_test.py`).
-- [ ] **3b. Resto do porte:** quadro, agenda, mês, comentários, anexos, imagens da semana e do mês, relatório, recorrentes, áreas e perfis (Life).
-- [ ] **4. Servidor (eu):** funções `ler-pedido` (IA), `gerar-recorrentes` (diária) e `enviar-push`.
-- [ ] **5. App no celular (eu):** manifesto, ícones, service worker, tela de "instalar".
+- [x] **3. Painel completo no Supabase (`/app`):** o painel inteiro (Início, Quadro, Agenda, Mês, comentários, anexos, imagens da semana e do mês, relatório em PDF, recorrentes, áreas e perfis) roda com login por usuário. Gerado por `tools/build_app.py` a partir do painel do Claude. Testado de ponta a ponta (`tests/app_full_test.py`, 27 verificações).
+- [x] **5. App no celular:** manifesto, ícones, service worker e dica de instalação.
+- [x] **4a. Funções:** `criar-perfil`, `redefinir-senha` e `ler-pedido` publicadas. A leitura por IA fica desligada até a chave da Anthropic entrar.
+- [ ] **4b. Servidor:** `gerar-recorrentes` (diária, sem ninguém abrir o app) e `enviar-push` (notificações).
 - [ ] **6. Migração (eu):** exportar as demandas, áreas, recorrentes e comentários do painel atual e importar, conferindo as contagens.
 - [ ] **7. Teste com a equipe (todos):** uso real por alguns dias, ajustes.
 - [ ] **8. Virada:** o link novo vira o oficial, o painel do Claude fica só como cópia de segurança. Domínio próprio, se quiserem.
