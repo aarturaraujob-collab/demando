@@ -20,8 +20,10 @@ notificações no celular e instalação como app (iPhone e Android) pelo navega
 ## Fases
 
 - [x] **0. Preparação:** plano e esquema do banco (`supabase/schema.sql`, sintaxe validada).
-- [ ] **1. Contas e chaves (você):** projeto no Supabase, chave da Anthropic.
-- [ ] **2. Banco (eu):** rodar o esquema, criar os admins, fechar o cadastro (só por convite), conferir as permissões.
+- [x] **1. Projeto Supabase:** criado (São Paulo, plano gratuito), com acesso por token restrito ao projeto.
+- [ ] **1b. Chave da Anthropic (você):** conta, chave de API e limite de gasto (só será preciso na fase da leitura por IA).
+- [x] **2. Banco:** esquema rodado e testado (`supabase/tests/rls_test.py`): 9 tabelas com RLS, papéis admin, membro e leitor, e anexos privados.
+- [ ] **2b. Login e primeiros usuários (eu):** método de login, cadastro só por convite, contas dos admins e da equipe.
 - [ ] **3. Porte do app (eu):** trocar a camada de dados do Claude pela do Supabase, login, papéis, tela de pessoas e acessos, tempo real, anexos.
 - [ ] **4. Servidor (eu):** funções `ler-pedido` (IA), `gerar-recorrentes` (diária) e `enviar-push`.
 - [ ] **5. App no celular (eu):** manifesto, ícones, service worker, tela de "instalar".
