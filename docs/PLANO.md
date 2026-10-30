@@ -14,8 +14,9 @@ notificações no celular e instalação como app (iPhone e Android) pelo navega
 | Notificação no celular | Web Push (PWA) | Chega com o celular bloqueado |
 | Instalação | PWA (manifesto, ícone do "ô", service worker) | Instala pelo navegador |
 
-**Quem entra:** cada pessoa com um **usuário e senha** (ex.: `juninho`). Por trás, o app converte o usuário num e-mail interno
-(`juninho@usuarios.demando.app`), que nunca recebe mensagem. Só o admin cria contas (cadastro livre fechado, senha mínima de 8).
+**Quem entra:** cada pessoa com um **usuário e senha** (ex.: `juninho`). Por trás, o app converte o usuário num e-mail interno da caixa central,
+com "+usuário" (`demandasbm+juninho@gmail.com`), então tudo cai numa caixa só. **Cada pessoa cria o próprio perfil** com o código da equipe
+(função `criar-perfil`); o perfil nasce sem acesso e o admin libera papel e áreas. O cadastro direto no Supabase fica fechado.
 Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `membro` e `leitor`
 (ex.: Gustavo, Júnior e Mariana acompanhando o Life). O acesso é por área. Acabam as senhas compartilhadas.
 
@@ -25,7 +26,8 @@ Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `memb
 - [x] **1. Projeto Supabase:** criado (São Paulo, plano gratuito), com acesso por token restrito ao projeto.
 - [ ] **1b. Chave da Anthropic (você):** conta, chave de API e limite de gasto (só será preciso na fase da leitura por IA).
 - [x] **2. Banco:** esquema rodado e testado (`supabase/tests/rls_test.py`): 9 tabelas com RLS, papéis admin, membro e leitor, e anexos privados.
-- [ ] **2b. Login e primeiros usuários (eu):** método de login, cadastro só por convite, contas dos admins e da equipe.
+- [x] **2b. Login:** usuário e senha, cadastro fechado no Supabase, função `criar-perfil` publicada e testada (`supabase/tests/cadastro_test.py`).
+- [ ] **2c. Primeiros admins (eu):** criar as contas de admin e liberar a equipe conforme os perfis forem criados.
 - [ ] **3. Porte do app (eu):** trocar a camada de dados do Claude pela do Supabase, login, papéis, tela de pessoas e acessos, tempo real, anexos.
 - [ ] **4. Servidor (eu):** funções `ler-pedido` (IA), `gerar-recorrentes` (diária) e `enviar-push`.
 - [ ] **5. App no celular (eu):** manifesto, ícones, service worker, tela de "instalar".

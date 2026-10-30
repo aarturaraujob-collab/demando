@@ -36,6 +36,7 @@ create table if not exists public.pessoas (
   id           uuid primary key references auth.users(id) on delete cascade,
   nome         text not null,
   email        text unique,
+  usuario      text unique,                                     -- o que a pessoa digita no login
   papel        text not null default 'leitor' check (papel in ('admin','membro','leitor')),
   nome_equipe  text,                                            -- como aparece nas escalas (ex.: "Celso")
   ativo        boolean not null default true,
@@ -51,9 +52,13 @@ create table if not exists public.acessos (
 -- Quem se cadastra entra como "leitor", sem acesso a nada, até um admin liberar.
 create or replace function public.novo_usuario() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  loc text := split_part(new.email, '@', 1);
+  u   text := coalesce(new.raw_user_meta_data->>'usuario',
+                       case when position('+' in loc) > 0 then substring(loc from position('+' in loc) + 1) else loc end);
 begin
-  insert into public.pessoas (id, nome, email)
-  values (new.id, coalesce(new.raw_user_meta_data->>'nome', split_part(new.email, '@', 1)), new.email)
+  insert into public.pessoas (id, nome, email, usuario)
+  values (new.id, coalesce(new.raw_user_meta_data->>'nome', u), new.email, u)
   on conflict (id) do nothing;
   return new;
 end $$;
