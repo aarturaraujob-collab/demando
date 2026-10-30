@@ -71,7 +71,7 @@ async def main():
         async with A.expect_download() as d: await A.click("#repPdf")
         dd=await d.value; pth=await dd.path(); chk("relatório baixa como PDF", open(pth,'rb').read(5)==b'%PDF-', dd.suggested_filename)
         await A.click("#repX")
-        chk("botões de IA escondidos (a chave da Anthropic ainda não foi configurada)", await A.locator("[data-act='paste']:visible").count()==0)
+        chk("botões de foto e colar texto aparecem pro admin (a IA só funciona depois que a chave da Anthropic entrar)", await A.locator("[data-act='paste']:visible").count()>=1)
         print("\n== PERFIL NOVO + LIBERAÇÃO")
         await B.goto(URL); await B.wait_for_selector("#g-criar"); await B.click("#g-criar")
         await B.fill("#g-nome","Pessoa Full Teste"); await B.fill("#g-usuario","tst.full"); await B.fill("#g-senha","SenhaForte123"); await B.fill("#g-codigo",CODIGO); await B.click("#g-enviar")

@@ -2026,7 +2026,8 @@ body.picker #areaBanner{display:none!important}
   }
   $("#aiStop").addEventListener("click", () => { if (aiCtl) aiCtl.abort(); aiShow(""); });
   const ERR = {
-    not_granted: "Sem permissão pra ler a foto. Libere o acesso ao Claude no menu do painel e tente de novo.",
+    not_configured: "A leitura por foto e texto ainda não foi ativada neste servidor. Falta a chave da Anthropic: fale com o admin.",
+    not_granted: "Sem permissão pra usar a leitura por IA. Fale com o admin.",
     rate_limited: "Muitas leituras seguidas. Espere um minuto e tente de novo.",
     image_rejected: "Não consegui abrir essa imagem. Tente um print em JPG ou PNG.",
     images_unavailable: "Leitura de fotos indisponível neste aparelho.",

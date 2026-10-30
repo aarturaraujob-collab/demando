@@ -45,6 +45,9 @@ rep('["area","Áreas"],["senha","Senhas"]];', '["area","Áreas"],["pessoas","Pes
 rep('area:panelArea, senha:panelSenha})[maisTab](box);', 'area:panelArea, pessoas:panelPessoas})[maisTab](box);')
 rep('  function panelSenha(box){', open(os.path.join(aqui, "pessoas_panel.js"), encoding="utf-8").read() + '  function panelSenha(box){')
 
+# 6) leitura por IA: mensagens próprias do servidor (o painel original fala em "Claude")
+rep('    not_granted: "Sem permissão pra ler a foto. Libere o acesso ao Claude no menu do painel e tente de novo.",', '    not_configured: "A leitura por foto e texto ainda não foi ativada neste servidor. Falta a chave da Anthropic: fale com o admin.",\n    not_granted: "Sem permissão pra usar a leitura por IA. Fale com o admin.",')
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n"
 h2 = h.replace(m.group(0), '<script type="text/plain" id="appcode">\n' + app + '</script>\n</body>')

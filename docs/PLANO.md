@@ -30,7 +30,7 @@ Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `memb
 - [ ] **2c. Primeiros admins (eu):** criar as contas de admin e liberar a equipe conforme os perfis forem criados.
 - [x] **3. Painel completo no Supabase (`/app`):** o painel inteiro (Início, Quadro, Agenda, Mês, comentários, anexos, imagens da semana e do mês, relatório em PDF, recorrentes, áreas e perfis) roda com login por usuário. Gerado por `tools/build_app.py` a partir do painel do Claude. Testado de ponta a ponta (`tests/app_full_test.py`, 27 verificações).
 - [x] **5. App no celular:** manifesto, ícones, service worker e dica de instalação.
-- [x] **4a. Funções:** `criar-perfil`, `redefinir-senha` e `ler-pedido` publicadas. A leitura por IA fica desligada até a chave da Anthropic entrar.
+- [x] **4a. Funções:** `criar-perfil`, `redefinir-senha` e `ler-pedido` publicadas. Os botões de foto e colar texto já aparecem no app; a leitura só passa a funcionar quando a chave da Anthropic entrar (até lá o app avisa).
 - [x] **4b. Servidor:** recorrentes criadas todo dia às 5h (Maceió) direto no banco, sem ninguém abrir o app (mesma regra do painel, testada), e notificações no celular (`enviar-push`): nova escala, escalado depois, direcionamento e resumo das 8h. Testado em ensaio, sem entrega real num aparelho.
 - [x] **6. Migração:** 39 demandas, a área Life e 4 anexos levados do painel do Claude (`tools/importar_do_claude.py`, pode rodar de novo na virada).
 - [ ] **7. Teste com a equipe (todos):** uso real por alguns dias, ajustes.

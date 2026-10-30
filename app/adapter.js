@@ -136,7 +136,7 @@ function montarClaude(){
     can: async () => escreve,
     profiles: async ids => { const r = await sb.rpc("nomes_pessoas", { ids }); const o = {}; (r.data || []).forEach(p => o[p.id] = { name:p.nome }); return o; }
   };
-  window.claude = { use: async nome => ({ db:{ collection:colecao }, user, downloads, assets: escreve ? assets : null, sample: (escreve && CFG.ia === true) ? sample : null })[nome] || null };
+  window.claude = { use: async nome => ({ db:{ collection:colecao }, user, downloads, assets: escreve ? assets : null, sample: escreve ? sample : null })[nome] || null };
 }
 
 /* ---------- tela de entrada ---------- */
