@@ -1004,6 +1004,11 @@ body.picker #areaBanner{display:none!important}
 .fl select{width:100%;min-width:0;max-width:100%;min-height:46px;box-sizing:border-box;text-overflow:ellipsis}
 .fl input,.fl textarea{box-sizing:border-box}
 .fsel,.srch{min-width:0}
+
+/* Quem está escalado, com nome */
+.avs .avn{margin-left:8px;font-weight:700;font-size:12px;color:var(--ink);white-space:nowrap}
+.shot-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.shot-nl{flex:1;text-align:center;font-weight:700;font-size:15px}
 </style>
 </head>
 <body>
@@ -1415,7 +1420,9 @@ body.picker #areaBanner{display:none!important}
   const match = it => (!secF || it.secretaria === secF) && (!perfF || it.perfil === perfF) && (!pessoa || team(it).includes(pessoa)) && (!q || norm([it.titulo,it.tipo,team(it).join(" "),it.solicitante,it.secretaria,it.perfil,it.local,it.obs,it.original].join(" ")).includes(q));
   function avsEl(it){
     const t = team(it); if (!t.length) return null;
-    return el("span",{class:"avs", title:t.join(", ")}, ...t.slice(0,4).map(n => el("span",{class:"av "+avColor(n)}, ini(n))), t.length > 4 ? el("span",{class:"av c6"}, "+"+(t.length-4)) : null);
+    return el("span",{class:"avs", title:t.join(", ")},
+      ...t.slice(0,3).map(n => el("span",{class:"av "+avColor(n)}, ini(n))),
+      el("span",{class:"avn"}, pessoasTxt(it)));
   }
   const inFr = it => show === "all" || it.frente === show;
   const isOpen = it => it.status !== "Entregue";
@@ -1715,6 +1722,7 @@ body.picker #areaBanner{display:none!important}
         el("button",{class:"btn","aria-label":"Mês anterior", onclick:()=>shift(-1)}, icon("left")),
         el("button",{class:"btn", onclick:()=>{ calMonth = t.slice(0,7); calSel = t; renderMonth(); }},"Hoje"),
         el("button",{class:"btn","aria-label":"Próximo mês", onclick:()=>shift(1)}, icon("right")))));
+    v.append(el("button",{type:"button", class:"shotb", onclick:() => openShot("mes")}, el("span",{class:"sq"}, icon("baixar")), el("span",{class:"tx"}, "Baixar cronograma do mês")));
     const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) && inFr(i) && match(i)).sort(order);
     const grid = el("div",{class:"grid"}, ...["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d => el("div",{class:"wd"},d)));
     for (let i=0;i<off;i++) grid.append(el("div",{class:"cell out","aria-hidden":"true"}));
@@ -2238,13 +2246,150 @@ body.picker #areaBanner{display:none!important}
     ctx.strokeStyle = SH.ink; ctx.lineWidth = 15; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(new Path2D("M20 27 L38 11 L56 27"));
     ctx.restore();
   }
+  /* ---------- Cronograma do mês e pessoas escaladas nas imagens ---------- */
+  const AVC = ["#2F5D8C","#8C4A2F","#5B4A8C","#2F7A6B","#8C2F5B","#6B6B2F","#4A5560"];
+  function pessoasTxt(it){
+    const t = team(it); if (!t.length) return "";
+    const all = EQUIPES[it.frente] || [];
+    if (t.length >= 4 && all.length && t.length >= all.length) return "Equipe toda";
+    return t.map(primeiroNome).join(", ");
+  }
+  function drawAv(ctx, cx, cy, r, nome, ring){
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = AVC[(parseInt(avColor(nome).slice(1), 10) || 0) % 7]; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = ring; ctx.stroke();
+    ctx.fillStyle = "#FFFFFF"; ctx.font = "800 " + Math.round(r * 0.95) + "px " + BODY; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(ini(nome), cx, cy + 1); ctx.restore();
+  }
+  // avatares das pessoas escaladas + os nomes, em negrito
+  function drawPeople(ctx, x, cy, it, d, ring, fontPx, maxW){
+    const t = team(it); if (!t.length) return;
+    const r = d / 2, step = d * 0.66, n = Math.min(3, t.length);
+    if (d >= 16) t.slice(0, n).forEach((nm, i) => drawAv(ctx, x + r + i * step, cy, r, nm, ring));
+    const avW = d >= 16 ? r * 2 + (n - 1) * step + 9 : 0;
+    ctx.save(); ctx.font = "700 " + fontPx + "px " + BODY; ctx.fillStyle = SH.ink; ctx.textBaseline = "middle";
+    ctx.fillText(wrap(ctx, pessoasTxt(it), Math.max(40, maxW - avW), 1)[0] || "", x + avW, cy + 1); ctx.restore();
+  }
+  function legendFor(fr){
+    const out = [];
+    (fr === "all" ? areaIds() : [fr]).forEach(k => {
+      const pl = PERFIS[k] || [];
+      if (pl.length) pl.forEach(n => out.push([primeiroNome(n), perfilCor(k, n)]));
+      else if (fr === "all") out.push([LBL[k], areaHex(k)]);
+    });
+    return out;
+  }
+  function weekRange(off){
+    const t = todayStr(), dow = (toDate(t).getDay() + 6) % 7, mon = addDays(t, -dow + 7 * off), sun = addDays(mon, 6);
+    const f1 = toDate(mon), f2 = toDate(sun), mes = d => d.toLocaleDateString("pt-BR", {month:"short"}).replace(".", "");
+    return f1.getMonth() === f2.getMonth() ? f1.getDate() + " a " + f2.getDate() + " " + mes(f2) : f1.getDate() + " " + mes(f1) + " a " + f2.getDate() + " " + mes(f2);
+  }
+  function shotNav(){
+    const move = n => {
+      if (shotMode === "mes"){ const [Y, M] = shotMes.split("-").map(Number), d = new Date(Y, M - 1 + n, 1); shotMes = d.getFullYear() + "-" + pad(d.getMonth() + 1); }
+      else shotOff += n;
+      renderShot();
+    };
+    let label;
+    if (shotMode === "mes"){ const [Y, M] = shotMes.split("-").map(Number); label = cap(MESES[M - 1]) + " de " + Y; }
+    else label = weekRange(shotOff) + (shotOff === 0 ? " · esta semana" : shotOff === 1 ? " · próxima semana" : shotOff === -1 ? " · semana passada" : "");
+    return el("div",{class:"shot-nav"},
+      el("button",{type:"button", class:"btn", "aria-label": shotMode === "mes" ? "Mês anterior" : "Semana anterior", onclick:() => move(-1)}, icon("left")),
+      el("span",{class:"shot-nl"}, label),
+      el("button",{type:"button", class:"btn", "aria-label": shotMode === "mes" ? "Próximo mês" : "Próxima semana", onclick:() => move(1)}, icon("right")));
+  }
+  async function buildMonthShot(fr){
+    try { await Promise.all(["700 60px 'Barlow Condensed'","700 30px Manrope","500 24px Manrope","600 24px Manrope","800 20px Manrope","800 36px Geist"].map(f => document.fonts.load(f))); } catch(e){}
+    const [Y, M] = shotMes.split("-").map(Number), nDays = new Date(Y, M, 0).getDate(), t = todayStr();
+    const lead = (new Date(Y, M - 1, 1).getDay() + 6) % 7, rows = Math.ceil((lead + nDays) / 7);
+    const base = items.filter(i => (fr === "all" || i.frente === fr) && (!secF || (fr !== "all" && fr !== "asc") || i.secretaria === secF) && (!pessoa || team(i).includes(pessoa)) && (!shotPerf || i.perfil === shotPerf));
+    const mes = base.filter(i => i.prazo && i.prazo.startsWith(shotMes)).sort(order);
+    const W = 1920, P = 56, GAP = 10, COLW = (W - P * 2 - GAP * 6) / 7, INNER = COLW - 28, MAXEV = 6;
+    const mctx = document.createElement("canvas").getContext("2d");
+    const one = fr !== "all", tone = one ? areaHex(fr) : SH.ink;
+    const meas = it => {
+      mctx.font = "700 18px " + BODY;
+      const hora = fmtHora(it.hora), tl = wrap(mctx, (hora ? hora + " · " : "") + it.titulo, INNER - 6, 2), hasPpl = team(it).length > 0;
+      const sub = hasPpl ? "" : (it.perfil ? primeiroNome(it.perfil) : (it.local || ""));
+      mctx.font = "600 15px " + BODY;
+      const sl = sub ? wrap(mctx, sub, INNER - 6, 1) : [];
+      return {it, tl, sl, hasPpl, h: 12 + tl.length * 23 + (hasPpl ? 6 + 24 : (sl.length ? 6 + 18 : 0)) + 10};
+    };
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < 7; c++){
+      const dn = r * 7 + c - lead + 1;
+      if (dn < 1 || dn > nDays){ cells.push({out:true, r, c}); continue; }
+      const d = shotMes + "-" + pad(dn), list = mes.filter(i => i.prazo === d);
+      cells.push({r, c, dn, d, blocks: list.slice(0, MAXEV).map(meas), extra: Math.max(0, list.length - MAXEV)});
+    }
+    const rowH = [];
+    for (let r = 0; r < rows; r++) rowH[r] = Math.max(cells.some(x => x.r === r && x.blocks && x.blocks.length) ? 132 : 90, ...cells.filter(x => x.r === r && !x.out).map(x => 54 + x.blocks.reduce((a, b) => a + b.h + 8, 0) + (x.extra ? 30 : 0) + 6));
+    const TOPW = 236, y0 = TOPW + 54, FOOT = 96;
+    const rowTop = []; let acc = y0; for (let r = 0; r < rows; r++){ rowTop[r] = acc; acc += rowH[r] + GAP; }
+    const H = acc - GAP + FOOT;
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = SH.bg; ctx.fillRect(0, 0, W, H);
+    if (one){
+      ctx.fillStyle = tone; ctx.fillRect(P, P, 40, 40);
+      ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(NOME_FR[fr].toUpperCase(), P + 56, P + 21); ctx.textBaseline = "alphabetic";
+    } else { drawMark(ctx, P, P - 3, 48); drawWordmark(ctx, P + 64, P + 36, 38); }
+    ctx.fillStyle = SH.ink; ctx.font = "700 84px " + DISP; ctx.fillText("Cronograma do mês", P, P + 128);
+    const scope = (one ? [fr === "fed" ? "Marketing" : fr === "asc" ? "Comunicação" : "", fr === "asc" ? secF : "", pessoa, shotPerf] : [siglasTxt(), secF, pessoa, shotPerf]).filter(Boolean).join(" · ");
+    ctx.textAlign = "right"; ctx.font = "700 34px " + DISP; ctx.fillStyle = SH.ink; ctx.fillText((MESES[M - 1] + " de " + Y).toUpperCase(), W - P, P + 34);
+    ctx.font = "500 24px " + BODY; ctx.fillStyle = SH.muted; ctx.fillText(scope, W - P, P + 70); ctx.textAlign = "left";
+    const done = mes.filter(i => !isOpen(i)).length;
+    const chips = [[plural(mes.length, "demanda", "demandas"), SH.ink, "#fff"]];
+    if (fr === "all") areaIds().forEach(k => { const n = mes.filter(i => i.frente === k).length; if (n) chips.push([n + " " + LBL[k], areaSoftHex(k), areaHex(k)]); });
+    if (done) chips.push([done + (done > 1 ? " entregues" : " entregue"), SH.sunk, SH.muted]);
+    ctx.font = "700 20px " + BODY;
+    let cx = W - P; const cy = P + 96;
+    for (const c of chips.slice().reverse()){ cx -= ctx.measureText(c[0]).width + 28; pill(ctx, cx, cy, c[0], c[1], c[2], "700 20px " + BODY); cx -= 10; }
+    ["SEGUNDA","TERÇA","QUARTA","QUINTA","SEXTA","SÁBADO","DOMINGO"].forEach((w, c) => {
+      const x = P + c * (COLW + GAP);
+      ctx.fillStyle = SH.sunk; rr(ctx, x, TOPW, COLW, 44, 12); ctx.fill();
+      ctx.fillStyle = SH.ink; ctx.font = "700 24px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(w, x + 14, TOPW + 23); ctx.textBaseline = "alphabetic";
+    });
+    for (const cell of cells){
+      if (cell.out) continue;
+      const x = P + cell.c * (COLW + GAP), y = rowTop[cell.r], h = rowH[cell.r], isT = cell.d === t;
+      ctx.fillStyle = SH.sunk; rr(ctx, x, y, COLW, h, 14); ctx.fill();
+      if (isT){ ctx.fillStyle = tone; rr(ctx, x + 10, y + 9, 46, 36, 12); ctx.fill(); }
+      ctx.fillStyle = isT ? "#FFFFFF" : (cell.c >= 5 ? SH.muted : SH.ink); ctx.font = "700 26px " + DISP;
+      ctx.textAlign = isT ? "center" : "left"; ctx.fillText(String(cell.dn), isT ? x + 33 : x + 16, y + 36); ctx.textAlign = "left";
+      let yy = y + 54;
+      for (const b of cell.blocks){
+        const it = b.it, pc0 = it.perfil ? perfilCor(it.frente, it.perfil) : "", col = pc0 || areaHex(it.frente), off = !isOpen(it);
+        ctx.globalAlpha = off ? 0.55 : 1;
+        ctx.fillStyle = SH.bg; rr(ctx, x + 8, yy, COLW - 16, b.h, 10); ctx.fill();
+        ctx.save(); rr(ctx, x + 8, yy, COLW - 16, b.h, 10); ctx.clip(); ctx.fillStyle = col; ctx.fillRect(x + 8, yy, 5, b.h); ctx.restore();
+        ctx.fillStyle = SH.ink; ctx.font = "700 18px " + BODY;
+        b.tl.forEach((l, k) => ctx.fillText(l, x + 24, yy + 12 + 17 + k * 23));
+        const ty = yy + 12 + b.tl.length * 23 + 6;
+        if (b.hasPpl) drawPeople(ctx, x + 24, ty + 12, it, 22, SH.bg, 15, COLW - 48);
+        else if (b.sl.length){ ctx.fillStyle = pc0 || SH.muted; ctx.font = "600 15px " + BODY; ctx.fillText(b.sl[0], x + 24, ty + 14); }
+        ctx.globalAlpha = 1; yy += b.h + 8;
+      }
+      if (cell.extra){ ctx.font = "800 17px " + BODY; ctx.fillStyle = tone; ctx.fillText("+ " + cell.extra + " no painel", x + 16, yy + 18); }
+    }
+    const now = new Date(), fy = H - 48;
+    ctx.fillStyle = SH.line; ctx.fillRect(P, fy, W - P * 2, 2);
+    ctx.font = "500 18px " + BODY; ctx.fillStyle = SH.muted;
+    ctx.fillText((one ? NOME_FR[fr] : "Demandô") + " · gerado em " + pad(now.getDate()) + "/" + pad(now.getMonth() + 1) + " às " + pad(now.getHours()) + "h" + pad(now.getMinutes()), P, H - 18);
+    ctx.textAlign = "right"; let lx = W - P;
+    for (const [lbl, cc] of legendFor(fr).reverse()){ ctx.fillStyle = SH.muted; ctx.font = "700 18px " + BODY; ctx.fillText(lbl, lx, H - 18); lx -= ctx.measureText(lbl).width + 10; ctx.fillStyle = cc; ctx.fillRect(lx - 14, H - 32, 14, 14); lx -= 40; }
+    ctx.textAlign = "left";
+    const blob = await new Promise(res => cv.toBlob(b => res(b), "image/png"));
+    const name = "cronograma-" + shotMes + (fr !== "all" ? "-" + LBL[fr].toLowerCase() : "") + (shotPerf ? "-" + norm(primeiroNome(shotPerf)).replace(/[^a-z0-9]+/g, "") : "") + ".png";
+    return [{blob, name}];
+  }
   async function buildShot(fr){
     try { await Promise.all(["700 60px 'Barlow Condensed'","700 30px Manrope","500 24px Manrope","600 24px Manrope","800 20px Manrope","800 36px Geist"].map(f => document.fonts.load(f))); } catch(e){}
     const t = todayStr();
-    const dow = (toDate(t).getDay() + 6) % 7, mon = addDays(t, -dow), sun = addDays(mon, 6);
+    const dow = (toDate(t).getDay() + 6) % 7, mon = addDays(t, -dow + 7 * shotOff), sun = addDays(mon, 6);
     const base = items.filter(i => (fr === "all" || i.frente === fr) && (!secF || (fr !== "all" && fr !== "asc") || i.secretaria === secF) && (!pessoa || team(i).includes(pessoa)) && (!shotPerf || i.perfil === shotPerf));
     const week = base.filter(i => i.prazo && i.prazo >= mon && i.prazo <= sun).sort(order);
-    const before = base.filter(i => isOpen(i) && i.prazo && i.prazo < mon).length;
+    const before = shotOff === 0 ? base.filter(i => isOpen(i) && i.prazo && i.prazo < mon).length : 0;
     const days = []; for (let k = 0; k < 7; k++){ const d = addDays(mon, k); days.push({d, list: week.filter(i => i.prazo === d)}); }
     const W = 1920, H = 1080, P = 56, GAP = 14, COLW = (W - P*2 - GAP*6) / 7;
     const TOP = 236, BOT = H - 64, AVAIL = BOT - TOP - 62;
@@ -2257,13 +2402,12 @@ body.picker #areaBanner{display:none!important}
       const when = [fmtHora(it.hora), it.local].filter(Boolean).join(" · ");
       ctx.font = "600 " + Math.round(16*s) + "px " + BODY;
       const wLines = when ? wrap(ctx, when, inner, mode.wl) : [];
-      ctx.font = "600 " + Math.round(15*s) + "px " + BODY;
-      const ppl = team(it).join(", ");
-      const pLines = ppl && mode.ppl ? wrap(ctx, ppl, inner, 1) : [];
-      const lh = Math.round(27*s), wl = Math.round(21*s), pl = Math.round(20*s), pillH = Math.round(26*s);
+      const lh = Math.round(27*s), wl = Math.round(21*s), pillH = Math.round(26*s);
+      const hasPpl = team(it).length > 0, avD = mode.ppl ? Math.round(26*s) : 0, pfs = Math.round((mode.ppl ? 17 : 15)*s);
+      const pH = hasPpl ? Math.max(avD, Math.round(22*s)) : 0;
       const hasP = fr === "all" || !isOpen(it) || it.status !== "A fazer" || !!it.perfil;
-      const h = Math.round(12*s) + tLines.length*lh + (wLines.length ? 4 + wLines.length*wl : 0) + (hasP ? Math.round(8*s) + pillH : 0) + (pLines.length ? 6 + pLines.length*pl : 0) + Math.round(12*s);
-      return {it, s, tLines, wLines, pLines, lh, wl, pl, pillH, h, hasP};
+      const h = Math.round(12*s) + tLines.length*lh + (wLines.length ? 4 + wLines.length*wl : 0) + (pH ? 6 + pH : 0) + (hasP ? Math.round(8*s) + pillH : 0) + Math.round(12*s);
+      return {it, s, tLines, wLines, lh, wl, pillH, h, hasP, avD, pfs, pH};
     }
     const modes = [];
     for (const lv of [{tl:3, wl:2, ppl:true}, {tl:2, wl:1, ppl:true}, {tl:1, wl:1, ppl:true}, {tl:1, wl:1, ppl:false}])
@@ -2337,6 +2481,7 @@ body.picker #areaBanner{display:none!important}
           m.wLines.forEach((l,j) => ctx.fillText(l, x + 18, ty + Math.round(16*s) + j*m.wl));
           ty += m.wLines.length * m.wl;
         }
+        if (m.pH){ ty += 6; drawPeople(ctx, x + 18, ty + m.pH / 2, it, m.avD, SH.sunk, m.pfs, COLW - 36); ty += m.pH; }
         if (m.hasP){
         ty += Math.round(8*s);
         const pf = "800 " + Math.round(13*s) + "px " + BODY;
@@ -2347,10 +2492,6 @@ body.picker #areaBanner{display:none!important}
         if (off) sp("✓ ENTREGUE", "#E3E7E4", SH.muted);
         else if (it.status !== "A fazer") sp(it.status.toUpperCase(), SH.ink, "#fff");
         ty += m.pillH;
-        }
-        if (m.pLines.length){
-          ty += 6; ctx.font = "600 " + Math.round(15*s) + "px " + BODY; ctx.fillStyle = SH.muted;
-          m.pLines.forEach((l,j) => ctx.fillText(l, x + 18, ty + Math.round(15*s) + j*m.pl));
         }
         ctx.globalAlpha = 1;
         y += m.h + lay.gaps[k]; shown++;
@@ -2373,7 +2514,7 @@ body.picker #areaBanner{display:none!important}
     return [{blob, name}];
   }
   const shot = $("#shot");
-  let shotFr = "all", shotPerf = "", shotPages = [], shotUrls = [];
+  let shotFr = "all", shotPerf = "", shotPages = [], shotUrls = [], shotMode = "semana", shotOff = 0, shotMes = "", shotBusy = false;
   function freeShot(){ shotUrls.forEach(u => URL.revokeObjectURL(u)); shotUrls = []; }
   const GRUPOS = {
     asc: {nome: "grupo da BM", link: "https://chat.whatsapp.com/KFqIUdPCTzmHOnn6FRqd6U?s=cl&p=i&mlu=4&ilr=4&iam=2", frase: "Segue demanda da semana, vamos times! 🔥💪🏼"}
@@ -2398,11 +2539,12 @@ body.picker #areaBanner{display:none!important}
   }
   async function renderShot(){
     const body = $("#shotBody");
+    $("#shotTitle").textContent = shotMode === "mes" ? "Cronograma do mês" : "Demandas da semana";
     const seg = el("div",{class:"shot-fr", role:"group", "aria-label":"Frente da imagem"},
       ...(role === "staff" && staffFr ? [[staffFr, LBL[staffFr]]] : [["all", siglasTxt()]].concat(areaIds().map(k => [k, "Só " + LBL[k]]))).map(([k,l]) => el("button",{type:"button","data-f":k,"aria-pressed":String(shotFr===k), onclick:()=>{ if (shotFr !== k){ shotFr = k; shotPerf = ""; renderShot(); } }}, l)));
     const plS = PERFIS[shotFr] || [];
     const seg2 = plS.length ? el("div",{class:"shot-fr", role:"group", "aria-label":"Perfil"}, ...[["","Todos os perfis"]].concat(plS.map(n => [n, n])).map(([k,l]) => el("button",{type:"button","data-f":"all","aria-pressed":String(shotPerf === k), onclick:()=>{ if (shotPerf !== k){ shotPerf = k; renderShot(); } }}, l))) : null;
-    shotPages = await buildShot(shotFr);
+    shotPages = shotMode === "mes" ? await buildMonthShot(shotFr) : await buildShot(shotFr);
     freeShot();
     const n = shotPages.length;
     const car = el("div",{class:"car"});
@@ -2410,26 +2552,30 @@ body.picker #areaBanner{display:none!important}
     shotPages.forEach((p, i) => {
       const u = URL.createObjectURL(p.blob); shotUrls.push(u);
       car.append(el("figure",{class:"slide"},
-        el("img",{class:"shot-img", src:u, alt:"Demandas da semana, imagem " + (i+1) + " de " + n}),
+        el("img",{class:"shot-img", src:u, alt:(shotMode === "mes" ? "Cronograma do mês" : "Demandas da semana") + ", imagem " + (i+1) + " de " + n}),
         el("figcaption",null,
-          el("span",null, n > 1 ? "Imagem " + (i+1) + " de " + n : "1920 × 1080 · segunda a domingo"),
+          el("span",null, n > 1 ? "Imagem " + (i+1) + " de " + n : (shotMode === "mes" ? "cronograma do mês · segunda a domingo" : "1920 × 1080 · segunda a domingo")),
           dl ? el("button",{type:"button", class:"btn", onclick:async e=>{ const b = e.currentTarget; b.disabled = true; if (await saveOne(p)) toast(n > 1 ? "Imagem " + (i+1) + " salva" : "Imagem salva"); b.disabled = false; }}, "Baixar" + (n > 1 ? " " + (i+1) : "")) : null)));
       dots.append(el("button",{type:"button","aria-label":"Ir para imagem " + (i+1), onclick:()=>car.children[i].scrollIntoView({behavior:"smooth", block:"nearest", inline:"start"})}));
     });
     const upd = () => { const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth)); [...dots.children].forEach((d,k) => d.setAttribute("aria-current", String(k === i))); };
     car.addEventListener("scroll", upd, {passive:true});
-    body.replaceChildren(seg, ...(seg2 ? [seg2] : []), car, n > 1 ? dots : "");
+    body.replaceChildren(shotNav(), seg, ...(seg2 ? [seg2] : []), car, n > 1 ? dots : "");
     upd();
     const sv = $("#shotSave");
     sv.hidden = !dl;
     sv.textContent = n > 1 ? "Baixar todas (" + n + ")" : "Baixar imagem";
     $("#shotHint").textContent = dl ? (n > 1 ? "Arraste pro lado pra ver as outras" : "") : "Toque e segure a imagem pra salvar.";
   }
-  async function openShot(){
-    const btn = $("#shotBtn"); btn.disabled = true;
-    try { shotFr = role === "staff" && staffFr ? staffFr : show; shotPerf = (PERFIS[show] || []).includes(perfF) ? perfF : ""; await renderShot(); shot.showModal(); }
-    catch(e){ toast("Não deu pra gerar a imagem."); }
-    finally { btn.disabled = false; }
+  async function openShot(mode){
+    if (shotBusy) return; shotBusy = true;
+    try {
+      shotMode = mode === "mes" ? "mes" : "semana"; shotOff = 0; shotMes = calMonth || todayStr().slice(0, 7);
+      shotFr = role === "staff" && staffFr ? staffFr : show;
+      shotPerf = (PERFIS[show] || []).includes(perfF) ? perfF : "";
+      await renderShot(); shot.showModal();
+    } catch(e){ toast("Não deu pra gerar a imagem."); }
+    finally { shotBusy = false; }
   }
   $("#shotBtn").append(el("span",{class:"sq"}, icon("baixar")), el("span",{class:"tx"}, "Baixar demandas da semana"));
   $("#shotBtn").addEventListener("click", openShot);
@@ -2441,7 +2587,7 @@ body.picker #areaBanner{display:none!important}
   $("#shotSave").addEventListener("click", async () => {
     if (!dl || !shotPages.length) return;
     const sv = $("#shotSave"); sv.disabled = true;
-    const g = GRUPOS[shotFr];
+    const g = shotMode === "semana" ? GRUPOS[shotFr] : null;
     const copied = g ? await copyText(g.frase) : false;
     let ok = 0;
     for (const p of shotPages){ if (await saveOne(p)) ok++; else break; }
