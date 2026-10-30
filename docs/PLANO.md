@@ -28,7 +28,8 @@ Quem esquecer a senha pede ao admin, que redefine. Três papéis: `admin`, `memb
 - [x] **2. Banco:** esquema rodado e testado (`supabase/tests/rls_test.py`): 9 tabelas com RLS, papéis admin, membro e leitor, e anexos privados.
 - [x] **2b. Login:** usuário e senha, cadastro fechado no Supabase, função `criar-perfil` publicada e testada (`supabase/tests/cadastro_test.py`).
 - [ ] **2c. Primeiros admins (eu):** criar as contas de admin e liberar a equipe conforme os perfis forem criados.
-- [ ] **3. Porte do app (eu):** trocar a camada de dados do Claude pela do Supabase, login, papéis, tela de pessoas e acessos, tempo real, anexos.
+- [x] **3a. App v1 (`/app`):** entrar, criar perfil, lista ao vivo, criar, editar e mover demandas, tela de pessoas do admin. Testado de ponta a ponta (`tests/app_test.py`).
+- [ ] **3b. Resto do porte:** quadro, agenda, mês, comentários, anexos, imagens da semana e do mês, relatório, recorrentes, áreas e perfis (Life).
 - [ ] **4. Servidor (eu):** funções `ler-pedido` (IA), `gerar-recorrentes` (diária) e `enviar-push`.
 - [ ] **5. App no celular (eu):** manifesto, ícones, service worker, tela de "instalar".
 - [ ] **6. Migração (eu):** exportar as demandas, áreas, recorrentes e comentários do painel atual e importar, conferindo as contagens.
