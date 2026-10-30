@@ -221,7 +221,7 @@ function iniciarSino(){
       const perm = await Notification.requestPermission();
       if (perm !== "granted"){ dica("As notificações estão bloqueadas. Libere nas configurações do navegador."); return; }
       const s = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(CFG.vapid) });
-      await salvar(s); marca(true); dica("Notificações ativadas neste aparelho");
+      await salvar(s); marca(true); dica("Notificações ativadas. Já já chega um aviso de teste."); sb.rpc("testar_aviso").then(() => {}, () => {});
     } catch(e){ dica("Não deu pra ativar as notificações agora."); }
   });
   pos(); window.addEventListener("resize", pos); setTimeout(pos, 800);

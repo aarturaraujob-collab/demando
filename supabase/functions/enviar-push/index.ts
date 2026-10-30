@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   const seg = Deno.env.get("PUSH_SECRET");
   if (!seg || req.headers.get("x-push-secret") !== seg) return json({ erro: "não autorizado" }, 401);
   const simulado = new URL(req.url).searchParams.get("simulado") === "1";
-  let b: { tipo?: string; id?: string; novos?: string[]; autor?: string };
+  let b: { tipo?: string; id?: string; novos?: string[]; autor?: string; pessoa?: string };
   try { b = await req.json(); } catch { return json({ erro: "pedido inválido" }, 400); }
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
@@ -25,7 +25,10 @@ Deno.serve(async (req) => {
 
   const envios: { pessoa_id: string; payload: Record<string, string> }[] = [];
   let demandaId: string | null = b.id ?? null;
-  if (b.tipo === "resumo") {
+  if (b.tipo === "teste") {
+    if (b.pessoa) envios.push({ pessoa_id: b.pessoa, payload: { title: "Demandô funcionando", body: "As notificações deste aparelho estão ligadas.", tag: "teste", url: "./" } });
+    demandaId = null;
+  } else if (b.tipo === "resumo") {
     const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);   // data em Maceió (UTC-3)
     const { data: dem } = await sb.from("demandas").select("id, titulo, area_id, equipe, hora").eq("prazo", hoje).neq("status", "Entregue");
     for (const p of pessoas ?? []) {
