@@ -1017,6 +1017,16 @@ body.picker #areaBanner{display:none!important}
 .avs .avn{margin-left:8px;font-weight:700;font-size:12px;color:var(--ink);white-space:nowrap}
 .shot-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .shot-nl{flex:1;text-align:center;font-weight:700;font-size:15px}
+dialog.mvd{border:0;border-radius:26px;padding:0;margin:auto;inset:0;width:min(92vw,440px);height:fit-content!important;max-height:90vh;overflow:auto;animation:none;background:var(--surface);color:var(--ink);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.mvd::backdrop{background:rgba(10,14,12,.58);backdrop-filter:blur(5px)}
+.mvd-b{padding:24px 22px 20px;display:grid;gap:13px}
+.mvd-b:focus,.mvd-go:focus:not(:focus-visible){outline:none}
+.mvd-t{margin:0;font:700 34px/1 var(--display);letter-spacing:-.02em}
+.mvd-b p{margin:0;color:var(--muted);font-size:15px;line-height:1.45}
+.mvd-b ol{margin:0;padding-left:20px;display:grid;gap:7px;font-size:14.5px;line-height:1.4}
+.mvd-a{display:grid;gap:10px;margin-top:4px}
+.mvd-go{display:block;text-align:center;text-decoration:none;font-weight:800;font-size:15px;background:linear-gradient(135deg,#2346C9,#2F5BEA);color:#fff;border-radius:15px;padding:15px 18px}
+.mvd-no{width:100%;border:0;background:var(--sunk);color:var(--muted);font-weight:700;font-size:15px;border-radius:15px;padding:14px 18px;cursor:pointer}
 
 .sem-voltar #backTop,.sem-voltar #backD{display:none!important}
 @media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}
@@ -1084,6 +1094,19 @@ body.picker #areaBanner{display:none!important}
 </div>
 <div class="toast" id="toast" hidden role="status"><span id="toastTxt"></span><button id="toastUndo" hidden>Desfazer</button></div>
 
+<dialog id="movedDlg" class="mvd" aria-labelledby="movedT">
+  <div class="mvd-b" tabindex="-1" autofocus>
+    <h2 class="mvd-t" id="movedT">O Demandô mudou de casa</h2>
+    <p>Agora ele é um app próprio: abre mais rápido, instala no celular e avisa quando você é escalado. <b>Todas as demandas já estão lá.</b></p>
+    <ol>
+      <li>Abra o link abaixo. No iPhone, instale: Compartilhar, depois Adicionar à Tela de Início.</li>
+      <li>Toque em <b>Criar meu perfil</b> e escolha seu usuário e senha.</li>
+      <li>Peça o <b>código da equipe</b> ao admin.</li>
+      <li>Espere o admin liberar o seu acesso.</li>
+    </ol>
+    <div class="mvd-a"><a class="mvd-go" id="movedGo" href="https://aarturaraujob-collab.github.io/demando/app/" target="_blank" rel="noopener">Abrir o novo Demandô</a><button type="button" class="mvd-no" id="movedNo">Agora não</button></div>
+  </div>
+</dialog>
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <form class="sheet" id="frm" method="dialog">
     <div class="sh-h"><h2 id="dlgTitle">Nova demanda</h2><button type="button" class="tplb" id="tplOpen">Usar modelo</button><button type="button" class="x" id="xBtn" aria-label="Fechar"></button></div>
@@ -3847,6 +3870,13 @@ body.picker #areaBanner{display:none!important}
       window.claude.use("assets").then(a => { assetsApi = a || null; if (det.open) renderDetailIfOpen(); }).catch(() => {});
     })();
   }
+  /* aviso de mudança: só no painel do Claude (no app novo existe window.DEMANDO_API; em teste local não aparece) */
+  (function(){
+    if (window.DEMANDO_API || /^(localhost|127\.|\[::1\]|)$/.test(location.hostname)) return;
+    const dl = document.getElementById("movedDlg"); if (!dl || !dl.showModal) return;
+    document.getElementById("movedNo").addEventListener("click", () => dl.close());
+    setTimeout(() => { try { dl.showModal(); } catch(e){} }, 900);
+  })();
 })();
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>

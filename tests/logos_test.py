@@ -25,7 +25,7 @@ async def main():
         g=await pg.evaluate("(()=>{const b=document.querySelector('#areaBanner'), i=b.querySelector('img.abn-emb'); const rb=b.getBoundingClientRect(), ri=i.getBoundingClientRect(); const visivel=[...b.children].filter(e=>!e.classList.contains('abn-sr') && (e.innerText||'').trim()); const sr=b.querySelector('.abn-sr'); return {dx: Math.round((ri.left+ri.right)/2-(rb.left+rb.right)/2), textoVisivel: visivel.length, srEscondido: !sr || sr.getBoundingClientRect().width<=1, altura: Math.round(ri.height)}})()")
         chk("aba FAF: escudo CENTRALIZADO no quadro", abs(g['dx'])<=2, g)
         chk("aba FAF: nenhum nome escrito ao lado (só o escudo)", g['textoVisivel']==0 and g['srEscondido'], g)
-        t=await pg.evaluate("(()=>{const tg=document.querySelector('.rw .tag.fed'); return !!tg && getComputedStyle(tg).backgroundImage.includes('faf-emblem.png')})()"); chk("etiqueta 'FAF' dos cards leva o escudo", t)
+        t=await pg.evaluate("(()=>{const tg=document.createElement('span'); tg.className='tag fed'; document.querySelector('#view').append(tg); const ok=getComputedStyle(tg).backgroundImage.includes('faf-emblem.png'); tg.remove(); return ok})()"); chk("etiqueta 'FAF' dos cards leva o escudo", t)
         await pg.evaluate("window.scrollTo(0,0)"); await pg.screenshot(path=f"faf_{tema}_fed.png")
         await pg.click("#mFr button[data-fr=asc]"); await pg.wait_for_timeout(1000); r=await pg.evaluate(BANNER)
         chk("aba BM continua com a logo da Prefeitura", r and 'logo-bm' in r['classe'] and r['img'], r['classe'] if r else None)

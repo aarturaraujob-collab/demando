@@ -7,13 +7,14 @@ Uso:  SB=<token Supabase> python3 tools/sincronizar_painel.py <pasta com os JSON
 Regra, demanda por demanda (comparando painel, site e a foto da última sincronização):
   só existe no painel  → traz pro site            só o painel mudou → atualiza o site
   só o site mudou      → mantém o site            os dois mudaram   → NÃO mexe, mostra o conflito
-Nunca apaga nada: demandas apagadas no painel só aparecem num aviso."""
+  --restaurar ids    traz de volta do painel demandas que foram apagadas no site.
+Nunca apaga nada: demandas apagadas no painel só aparecem num aviso; as apagadas no site não voltam sozinhas."""
 import os, sys, json, glob, hashlib, tempfile, shutil, subprocess, requests
 SB = os.environ["SB"]; REF = "uaakiytxphmtwsthooih"; M = {"Authorization": "Bearer " + SB, "User-Agent": "demando-sync"}
 args = sys.argv[1:]; flag = lambda f: f in args
 def val(f): return args[args.index(f) + 1] if f in args and args.index(f) + 1 < len(args) else None
-pastas = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i-1] not in ("--semear", "--aceitar"))]
-PASTA = pastas[0] if pastas else None; APLICAR = flag("--aplicar"); SEMEAR = val("--semear"); ACEITAR = set(filter(None, (val("--aceitar") or "").split(",")))
+pastas = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i-1] not in ("--semear", "--aceitar", "--restaurar"))]
+PASTA = pastas[0] if pastas else None; APLICAR = flag("--aplicar"); SEMEAR = val("--semear"); ACEITAR = set(filter(None, (val("--aceitar") or "").split(","))); RESTAURAR = set(filter(None, (val("--restaurar") or "").split(",")))
 def sql(q): r = requests.post(f"https://api.supabase.com/v1/projects/{REF}/database/query", headers=M, json={"query": q}); r.raise_for_status(); return r.json()
 sql("create table if not exists public.sync_painel (id text primary key, p text not null, s text not null, em timestamptz not null default now()); alter table public.sync_painel enable row level security;")
 nz = lambda v: None if v in ("", None) else v
@@ -36,10 +37,11 @@ if SEMEAR:
 painel = ler(PASTA)
 site = {r["id"]: r for r in sql("select id, area_id, titulo, tipo, prazo::text prazo, hora::text hora, local, status, equipe, secretaria, perfil, obs, solicitante, entregue::text entregue, checklist, anexos from public.demandas")}
 base = {r["id"]: r for r in sql("select id, p, s from public.sync_painel")}
-novos, atualizar, manter, conflitos, sem_ref, iguais = [], [], [], [], [], []
+novos, atualizar, manter, conflitos, sem_ref, iguais, apagadas_site = [], [], [], [], [], [], []
 for i, d in painel.items():
     P = H(canon(d))
-    if i not in site: novos.append(i); continue
+    if i not in site:
+        (apagadas_site if (i in base and i not in RESTAURAR) else novos).append(i); continue
     S = H(canon(site[i], True)); b = base.get(i)
     if i in ACEITAR: up(i, P, S); iguais.append(i); continue
     if P == S: iguais.append(i); up(i, P, S); continue
@@ -55,6 +57,10 @@ print(f"CONFLITO (os dois mudaram, nada será alterado): {len(conflitos) + len(s
 for i in conflitos + sem_ref: print("   ", i, "·", t(i), "(sem foto anterior)" if i in sem_ref else "")
 print(f"iguais nos dois lados: {len(iguais)}")
 if so_site: print(f"\nsó no site (criadas lá): {len(so_site)}"); [print("   ", i, "·", t(i)) for i in so_site]
+if apagadas_site:
+    quem = {r["registro_id"]: r for r in sql("select l.registro_id, coalesce(p.usuario,'(servidor)') quem, to_char(l.apagado_em at time zone 'America/Maceio','DD/MM HH24:MI') quando from public.lixeira l left join public.pessoas p on p.id = l.apagado_por where l.tabela='demandas' and l.restaurado_em is null order by l.id")}
+    print(f"\nAPAGADAS NO SITE (de propósito? NÃO serão trazidas de volta; use --restaurar id se foi engano): {len(apagadas_site)}")
+    for i in apagadas_site: q = quem.get(i); print("   ", i, "·", t(i), f"· apagada por {q['quem']} em {q['quando']}" if q else "· (sem registro de quem apagou: foi antes da lixeira)")
 if apagadas: print(f"\nAPAGADAS no painel desde a última vez (o site NÃO apaga sozinho): {len(apagadas)}"); [print("   ", i) for i in apagadas]
 if APLICAR and (novos or atualizar):
     tmp = tempfile.mkdtemp(); os.makedirs(os.path.join(tmp, "demandas", "demandas"))
@@ -65,4 +71,4 @@ if APLICAR and (novos or atualizar):
     subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "importar_do_claude.py"), tmp], env=env, check=True)
     for i in novos + atualizar: h = H(canon(painel[i])); up(i, h, h)
 elif not APLICAR and (novos or atualizar): print("\n(ensaio: nada foi alterado. Rode de novo com --aplicar)")
-print("\nRESULTADO:", "tudo em dia" if not (novos or atualizar or conflitos or sem_ref) else "há pendências acima")
+print("\nRESULTADO:", "tudo em dia" if not (novos or atualizar or conflitos or sem_ref or apagadas_site) else "há pendências acima")
