@@ -232,6 +232,73 @@ function iniciarSino(){
   (async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s && Notification.permission === "granted"){ await salvar(s); marca(true); } else marca(false); } catch(e){ marca(false); } })();
 }
 
+
+/* ---------- anexos: visualizador dentro do app (prévia + fechar + baixar) ---------- */
+function iniciarAnexos(){
+  const st = document.createElement("style");
+  st.textContent = 'dialog#axv{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#0b0e0d;color:#fff;overscroll-behavior:contain}dialog#axv[open]{display:flex;flex-direction:column}dialog#axv::backdrop{background:#0b0e0d}dialog#axv :focus,dialog#axv:focus{outline:none}.axv-x:focus-visible,.axv-b:focus-visible{outline:2px solid #fff;outline-offset:2px}.axv-h{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:rgba(22,27,25,.98);border-bottom:1px solid rgba(255,255,255,.08)}.axv-x,.axv-b{border:0;border-radius:12px;height:42px;padding:0 14px;font-weight:700;font-size:14.5px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:#fff;background:rgba(255,255,255,.14);flex:none}.axv-b{background:#fff;color:#0b0e0d}.axv-b svg,.axv-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.axv-t{flex:1;min-width:0;display:grid;text-align:center}.axv-n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.axv-s{font-size:12px;opacity:.65}.axv-c{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;flex-direction:column;align-items:center;gap:12px}.axv-c img{max-width:100%;height:auto;border-radius:10px;touch-action:pinch-zoom pan-x pan-y}.axv-c canvas{background:#fff;border-radius:6px;max-width:100%;flex:none;box-shadow:0 6px 24px rgba(0,0,0,.45)}.axv-c video{max-width:100%;max-height:100%;border-radius:10px}.axv-msg{margin:auto;text-align:center;opacity:.85;font-size:15px;max-width:300px;line-height:1.45}.axv-arq{margin:auto;display:grid;gap:14px;justify-items:center;text-align:center}.axv-arq b{font-size:17px}#axvT{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 40px);background:#fff;color:#0b0e0d;padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:400;max-width:88vw;text-align:center}';
+  document.head.append(st);
+  const ICO_BAIXAR = '<svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/></svg>', ICO_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  const nosso = u => /\/storage\/v1\/object\//.test(u || "");
+  const dica = t => { let e = document.getElementById("axvT"); if (!e){ e = document.createElement("div"); e.id = "axvT"; } const ds = document.querySelectorAll("dialog[open]"); (ds.length ? ds[ds.length - 1] : document.body).append(e); e.textContent = t; e.hidden = false; clearTimeout(e._x); e._x = setTimeout(() => e.hidden = true, 4200); };
+  const cache = new Map();
+  const pegarBlob = async url => { if (cache.has(url)) return cache.get(url); const r = await fetch(url); if (!r.ok) throw new Error("http " + r.status); const bl = await r.blob(); cache.set(url, bl); if (cache.size > 6) cache.delete(cache.keys().next().value); return bl; };
+  const tipoDe = (nome, mime) => { const m = (mime || "").toLowerCase(), n = (nome || "").toLowerCase(); if (m.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic|avif)$/.test(n)) return "img"; if (m === "application/pdf" || /\.pdf$/.test(n)) return "pdf"; if (m.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/.test(n)) return "vid"; return "arq"; };
+  const tam = n => n > 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+  async function baixar(url, nome, mime){
+    try {
+      const bl = await pegarBlob(url), file = new File([bl], nome || "arquivo", { type: mime || bl.type || "application/octet-stream" });
+      if (navigator.canShare && navigator.canShare({ files:[file] })){
+        try { await navigator.share({ files:[file], title:file.name }); return; }
+        catch(e){ if (e && e.name === "AbortError") return; if (e && e.name === "NotAllowedError"){ abrir(url, nome, mime); dica("Pronto. Toque em Baixar."); return; } }
+      }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = file.name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    } catch(e){ dica("Não consegui baixar agora. Tente de novo."); }
+  }
+  let pdfP = null;
+  const carregarPdf = () => window.pdfjsLib ? Promise.resolve() : (pdfP = pdfP || new Promise((ok, no) => { const s = document.createElement("script"); s.src = "vendor/pdf.min.js"; s.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js"; ok(); } catch(e){ no(e); } }; s.onerror = () => { pdfP = null; no(new Error("pdfjs")); }; document.head.append(s); }));
+  async function mostrarPdf(bl, c, sub){
+    await carregarPdf();
+    const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await bl.arrayBuffer()) }).promise;
+    c.replaceChildren(); sub.textContent = pdf.numPages + (pdf.numPages > 1 ? " páginas" : " página");
+    const W = Math.min(c.clientWidth - 24, 920) || 340, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const obs = new IntersectionObserver(es => es.forEach(async en => { if (!en.isIntersecting) return; const cv = en.target; obs.unobserve(cv); if (cv._ok) return; cv._ok = true; try { const pg = await pdf.getPage(cv._n), vp = pg.getViewport({ scale: (W / pg.getViewport({ scale:1 }).width) * dpr }); cv.width = vp.width; cv.height = vp.height; await pg.render({ canvasContext:cv.getContext("2d"), viewport:vp }).promise; cv.setAttribute("data-pronta", "1"); } catch(e){} }), { root:c, rootMargin:"900px 0px" });
+    for (let n = 1; n <= pdf.numPages; n++){ const pg = await pdf.getPage(n), v1 = pg.getViewport({ scale:1 }), cv = document.createElement("canvas"); cv._n = n; cv.width = 10; cv.height = 10; cv.style.width = W + "px"; cv.style.height = Math.round(W * v1.height / v1.width) + "px"; c.append(cv); obs.observe(cv); }
+  }
+  let aberto = null;
+  function fechar(){ if (!aberto) return; (aberto.urls || []).forEach(u => URL.revokeObjectURL(u)); try { aberto.box.close(); } catch(e){} aberto.box.remove(); document.body.style.overflow = aberto.ov; aberto = null; }
+  async function abrir(url, nome, mime){
+    fechar();
+    const box = document.createElement("dialog"); box.id = "axv"; box.setAttribute("aria-label", "Anexo " + nome);
+    box.innerHTML = '<div class="axv-h"><button type="button" class="axv-x">' + ICO_X + 'Fechar</button><div class="axv-t"><span class="axv-n"></span><span class="axv-s"></span></div><button type="button" class="axv-b">' + ICO_BAIXAR + 'Baixar</button></div><div class="axv-c"><div class="axv-msg">Carregando…</div></div>';
+    box.querySelector(".axv-n").textContent = nome || "Anexo"; const c = box.querySelector(".axv-c"), sub = box.querySelector(".axv-s");
+    aberto = { box, urls:[], ov:document.body.style.overflow }; document.body.style.overflow = "hidden"; c.tabIndex = -1; c.setAttribute("autofocus", ""); document.body.append(box); box.showModal();
+    box.addEventListener("cancel", ev => { ev.preventDefault(); if (history.state && history.state.axv) history.back(); else fechar(); });
+    try { history.pushState({ axv:1 }, ""); } catch(e){}
+    box.querySelector(".axv-x").addEventListener("click", () => { if (history.state && history.state.axv) history.back(); else fechar(); });
+    box.querySelector(".axv-b").addEventListener("click", () => baixar(url, nome, mime));
+    let t = tipoDe(nome, mime);
+    try {
+      if (t === "vid"){ const v = document.createElement("video"); v.src = url; v.controls = true; v.playsInline = true; c.replaceChildren(v); return; }
+      const bl = await pegarBlob(url); if (!aberto || aberto.box !== box) return; if (t === "arq") t = tipoDe(nome, bl.type);
+      sub.textContent = tam(bl.size);
+      if (t === "img"){ const u = URL.createObjectURL(bl); aberto.urls.push(u); const im = document.createElement("img"); im.alt = nome; im.src = u; c.replaceChildren(im); }
+      else if (t === "pdf"){ try { await mostrarPdf(bl, c, sub); } catch(e){ c.replaceChildren(Object.assign(document.createElement("div"), { className:"axv-msg", textContent:"Não consegui mostrar a prévia deste PDF. Toque em Baixar pra abrir no seu aparelho." })); } }
+      else { const d = document.createElement("div"); d.className = "axv-arq"; d.innerHTML = '<b></b><span>Este tipo de arquivo não tem prévia aqui. Toque em Baixar pra abrir.</span>'; d.querySelector("b").textContent = nome; c.replaceChildren(d); }
+    } catch(e){ if (aberto && aberto.box === box) c.replaceChildren(Object.assign(document.createElement("div"), { className:"axv-msg", textContent:"Não consegui carregar o arquivo agora. Feche e tente de novo." })); }
+  }
+  window.addEventListener("popstate", fechar);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && aberto){ if (history.state && history.state.axv) history.back(); else fechar(); } });
+  document.addEventListener("click", e => {
+    const dl = e.target.closest && e.target.closest("[data-baixar]");
+    if (dl){ e.preventDefault(); e.stopPropagation(); dica("Preparando o arquivo…"); baixar(dl.getAttribute("data-baixar"), dl.getAttribute("data-nome")); return; }
+    const a = e.target.closest && e.target.closest("a.ax-img, a.ax-chip");
+    if (!a || !nosso(a.href)) return;
+    e.preventDefault(); e.stopPropagation();
+    abrir(a.href, a.getAttribute("title") || (a.querySelector("span") && a.querySelector("span").textContent) || "arquivo");
+  }, true);
+}
+
 /* ---------- depois de entrar ---------- */
 async function seguir(){
   tela(h("p", { class:"gs" }, "Carregando…"));
@@ -255,6 +322,7 @@ async function seguir(){
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
   const s = document.createElement("script"); s.textContent = document.getElementById("appcode").textContent; document.body.append(s);
   iniciarSino();
+  iniciarAnexos();
 }
 (async () => { const { data: { session } } = await sb.auth.getSession(); if (session) seguir(); else telaEntrar(); })();
 })();

@@ -60,8 +60,34 @@ rep('onclick:async e => { try { await Notification.requestPermission(); } catch(
 # 8) o funcionário que ainda não escolheu o nome vê o cartão "Quem é você?" logo no topo do Início
 rep('    $("#meHold").replaceChildren(); renderAreaBanner();', '    $("#meHold").replaceChildren(); renderAreaBanner();\n    if (view === "today" && role === "staff" && !meNome && !(PERFIS[staffFr] || []).length && nomesDoUsuario().length) $("#meHold").append(chooser());')
 
+
+# 9) anexos: botão de baixar ao lado de cada arquivo guardado no servidor (abrir/prévia é feito pelo visualizador do adapter)
+rep(r"""const anexosGrid = list => { const nodes = (list || []).map(anexoEl).filter(Boolean);""", r"""const comBaixar = (n, a) => { if (!n || !a || !/\/storage\/v1\/object\//.test(a.url || "")) return n; const w = n.classList && n.classList.contains("ax-chip"); return el("div",{class:"ax-w" + (w ? " wide" : "")}, n, el("button",{type:"button", class:"ax-dl", "data-baixar":a.url, "data-nome":a.nome || "arquivo", "aria-label":"Baixar " + (a.nome || "arquivo"), title:"Baixar"}, icon("baixar"))); };
+  const anexosGrid = list => { const nodes = (list || []).map(a => comBaixar(anexoEl(a), a)).filter(Boolean);""")
+# 10) botão "Sair da conta" no fim do Início e do Mais (no app instalado não há outro jeito de voltar pro login)
+rep(r"""baixar:'<path d="M12 4v11"/>""", r"""sair:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  baixar:'<path d="M12 4v11"/>""")
+rep(r"""mais:renderMais})[view](); }""", r"""mais:renderMais})[view](); if (window.DEMANDO_API && (view === "today" || view === "mais")) $("#view").append(el("div",{class:"sair-box"}, el("button",{type:"button", class:"sair-b", onclick:() => { if (confirm("Sair da conta?")) window.DEMANDO_API.sair(); }}, icon("sair"), "Sair da conta"))); }""")
+# 11) logo da Prefeitura de Boca da Mata no banner da área BM
+rep(r"""    ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));""", r"""    ab.classList.toggle("logo", k === "asc");
+    if (k === "asc") ab.replaceChildren(el("img",{class:"abn-logo", src:"assets/bm-logo.png", alt:"", draggable:"false"}), el("span",{class:"abn-sr"}, NOME_FR[k] || "Boca da Mata"));
+    else ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));""")
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
+
+css_extra += """
+.ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
+.ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
+.ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
+.sair-box{display:flex;justify-content:center;padding:28px 0 12px}
+.sair-b{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--surface);color:var(--muted);font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:14px;box-shadow:var(--ring)}.sair-b svg{width:18px;height:18px}
+.tag.asc{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
+.abn.logo{background:linear-gradient(135deg,#0B5E3B,#0E7A4D 70%,#12935C);padding:14px 18px;box-shadow:0 10px 28px -14px rgba(14,122,77,.7)}
+.abn-logo{height:46px;width:auto;max-width:100%;display:block}
+.abn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.abn{position:relative}
+"""
 h2 = h.replace(m.group(0), '<script type="text/plain" id="appcode">\n' + app + '</script>\n</body>')
 h2 = h2.replace("</style>", css_extra + "</style>", 1)
 libs = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>\n<script src="config.js"></script>\n<script src="adapter.js"></script>\n'
@@ -73,5 +99,6 @@ os.makedirs(out, exist_ok=True)
 open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(h2)
 for f in ("adapter.js", "config.js"): shutil.copy(os.path.join(aqui, f), os.path.join(out, f))
 for f in ("manifest.webmanifest", "sw.js"): shutil.copy(os.path.join(aqui, "pwa", f), os.path.join(out, f))
-shutil.rmtree(os.path.join(out, "icons"), ignore_errors=True); shutil.copytree(os.path.join(aqui, "pwa", "icons"), os.path.join(out, "icons"))
+for d in ("icons", "vendor", "assets"):
+    shutil.rmtree(os.path.join(out, d), ignore_errors=True); shutil.copytree(os.path.join(aqui, "pwa", d), os.path.join(out, d))
 print("gerado:", os.path.join(out, "index.html"), len(h2), "bytes")

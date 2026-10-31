@@ -1,0 +1,2 @@
+pdf.js 3.11.174 (Mozilla) · licença Apache 2.0 · https://github.com/mozilla/pdf.js
+Copiado de cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174 — usado só pra mostrar a prévia dos PDFs anexados.

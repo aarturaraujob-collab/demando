@@ -1020,6 +1020,17 @@ body.picker #areaBanner{display:none!important}
 
 .sem-voltar #backTop,.sem-voltar #backD{display:none!important}
 @media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}
+
+.ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
+.ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
+.ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
+.sair-box{display:flex;justify-content:center;padding:28px 0 12px}
+.sair-b{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--surface);color:var(--muted);font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:14px;box-shadow:var(--ring)}.sair-b svg{width:18px;height:18px}
+.tag.asc{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
+.abn.logo{background:linear-gradient(135deg,#0B5E3B,#0E7A4D 70%,#12935C);padding:14px 18px;box-shadow:0 10px 28px -14px rgba(14,122,77,.7)}
+.abn-logo{height:46px;width:auto;max-width:100%;display:block}
+.abn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.abn{position:relative}
 </style>
 </head>
 <body>
@@ -1276,7 +1287,8 @@ body.picker #areaBanner{display:none!important}
     minhas:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
     escala:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     predio:'<path d="M4 20.5h16M6 20.5V6.5l6-3 6 3v14M9.5 9h1M13.5 9h1M9.5 12.5h1M13.5 12.5h1M10.5 20.5v-4h3v4"/>',
-    baixar:'<path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/>',
+    sair:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  baixar:'<path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/>',
     tag:'<path d="M20 12.5 12.5 20a2 2 0 0 1-2.8 0L3.5 13.8V4.5h9.3L20 11.7a1 1 0 0 1 0 .8z"/><circle cx="8.2" cy="8.8" r="1.2"/>',
     volta:'<path d="M9 7 4.5 11.5 9 16"/><path d="M5 11.5h8a6 6 0 0 1 6 6"/>',
     local:'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -1757,7 +1769,7 @@ body.picker #areaBanner{display:none!important}
     }
   }
 
-  function renderView(){ ({today:renderToday, board:renderBoard, agenda:renderAgenda, month:renderMonth, minhas:renderMinhas, escala:renderEscala, mais:renderMais})[view](); }
+  function renderView(){ ({today:renderToday, board:renderBoard, agenda:renderAgenda, month:renderMonth, minhas:renderMinhas, escala:renderEscala, mais:renderMais})[view](); if (window.DEMANDO_API && (view === "today" || view === "mais")) $("#view").append(el("div",{class:"sair-box"}, el("button",{type:"button", class:"sair-b", onclick:() => { if (confirm("Sair da conta?")) window.DEMANDO_API.sair(); }}, icon("sair"), "Sair da conta"))); }
   function render(){
     if (!ALL_VIEWS.some(x => x[0] === view)) view = "today";
     if (role === "staff" && view === "mais") view = "today";
@@ -3015,7 +3027,8 @@ body.picker #areaBanner{display:none!important}
     if (t === "vid") return el("figure",{class:"ax ax-vid"}, el("video",{src:url, controls:"", preload:"metadata", playsinline:""}), el("figcaption",null,nome));
     return el("a",{class:"ax ax-chip", href:url, target:"_blank", rel:"noopener"}, icon(t === "pdf" ? "pdf" : t === "link" ? "link" : "clip"), el("span",null,nome), el("small",null, t === "pdf" ? "PDF" : t === "link" ? hostOf(url) : "arquivo"));
   }
-  const anexosGrid = list => { const nodes = (list || []).map(anexoEl).filter(Boolean); return nodes.length ? el("div",{class:"ax-g"}, ...nodes) : null; };
+  const comBaixar = (n, a) => { if (!n || !a || !/\/storage\/v1\/object\//.test(a.url || "")) return n; const w = n.classList && n.classList.contains("ax-chip"); return el("div",{class:"ax-w" + (w ? " wide" : "")}, n, el("button",{type:"button", class:"ax-dl", "data-baixar":a.url, "data-nome":a.nome || "arquivo", "aria-label":"Baixar " + (a.nome || "arquivo"), title:"Baixar"}, icon("baixar"))); };
+  const anexosGrid = list => { const nodes = (list || []).map(a => comBaixar(anexoEl(a), a)).filter(Boolean); return nodes.length ? el("div",{class:"ax-g"}, ...nodes) : null; };
   async function subir(file){
     if (!assetsApi) throw {code:"unavailable"};
     if (file.size > MAX_FILE) throw {code:"too_big"};
@@ -3515,7 +3528,9 @@ body.picker #areaBanner{display:none!important}
     const k = role === "staff" ? (frOk() ? staffFr : "") : (show !== "all" ? show : "");
     if (!k || view === "mais" || !areaIds().includes(k)){ ab.hidden = true; ab.replaceChildren(); return; }
     ab.style.setProperty("--a", "var(--" + k + ")");
-    ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));
+    ab.classList.toggle("logo", k === "asc");
+    if (k === "asc") ab.replaceChildren(el("img",{class:"abn-logo", src:"assets/bm-logo.png", alt:"", draggable:"false"}), el("span",{class:"abn-sr"}, NOME_FR[k] || "Boca da Mata"));
+    else ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));
     ab.hidden = false;
   }
   function frChip(){
