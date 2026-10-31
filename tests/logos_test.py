@@ -30,7 +30,7 @@ async def main():
         await pg.click("#mFr button[data-fr=asc]"); await pg.wait_for_timeout(1000); r=await pg.evaluate(BANNER)
         chk("aba BM continua com a logo da Prefeitura", r and 'logo-bm' in r['classe'] and r['img'], r['classe'] if r else None)
         await pg.screenshot(path=f"faf_{tema}_bm.png")
-        await pg.click("#mFr button[data-fr=all]"); await pg.wait_for_timeout(900); await pg.click("#tabbar [data-view=agenda]"); await pg.wait_for_timeout(1200); await pg.screenshot(path=f"faf_{tema}_agenda.png")
+        await pg.click("#mFr button[data-fr=all]"); await pg.wait_for_timeout(900); await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(1200); await pg.screenshot(path=f"faf_{tema}_agenda.png")
         chk("sem área escolhida ('Todas'): sem banner", await pg.evaluate("(()=>{const b=document.querySelector('#areaBanner'); return !b || b.hidden})()"))
         await ctx.close()
       print("\n######## ARQUIVO DO ESCUDO")

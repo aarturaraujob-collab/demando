@@ -74,9 +74,55 @@ rep(r"""    ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class
     else if (k === "fed") ab.replaceChildren(el("img",{class:"abn-emb", src:"assets/faf-emblem.png", alt:"", draggable:"false"}), el("span",{class:"abn-sr"}, "Federação Alagoana de Futebol"));
     else ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));""")
 
+
+# 12) barra de baixo: sai a "Agenda" (o Início já mostra a agenda) e entra o "+" em destaque no meio, com as 3 opções de criar
+rep(r"""  const VIEWS = [["today","Início"],["board","Quadro"],["agenda","Agenda"],["month","Mês"]];""", r"""  const VIEWS = [["today","Início"],["board","Quadro"],["month","Mês"]];""")
+rep(r"""  function buildNav(){""", r"""  /* menu do "+": nova demanda, por texto, por foto (usa os mesmos botões que já existiam, agora escondidos) */
+  let plusM = null;
+  function closePlus(){ if (!plusM) return; plusM.remove(); plusM = null; document.body.classList.remove("pm-open"); const b = document.querySelector(".tab-plus"); if (b){ b.setAttribute("aria-expanded", "false"); b.classList.remove("open"); } }
+  function togglePlus(){
+    if (plusM) return closePlus();
+    const fab = document.getElementById("fab"), orig = k => fab && fab.querySelector('[data-act="' + k + '"]');
+    const op = (k, tit, sub, ic) => { const o = orig(k); if (!o || o.hidden) return null; return el("button",{type:"button", role:"menuitem", class:"pm-i", "data-op":k, onclick:() => { closePlus(); o.click(); }}, el("span",{class:"pm-ic"}, icon(ic)), el("span",{class:"pm-t"}, el("b",null,tit), el("small",null,sub))); };
+    const itens = [op("new","Nova demanda","do zero","plus"), op("paste","Por texto","copiar e colar","paste"), op("photo","Por foto","tirar ou escolher","cam")].filter(Boolean);
+    if (!itens.length) return;
+    plusM = el("div",{class:"pm", id:"plusMenu"}, el("div",{class:"pm-scrim", onclick:closePlus}), el("div",{class:"pm-box", role:"menu", "aria-label":"Criar demanda"}, ...itens));
+    document.body.append(plusM); document.body.classList.add("pm-open");
+    const b = document.querySelector(".tab-plus"); if (b){ b.setAttribute("aria-expanded", "true"); b.classList.add("open"); }
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closePlus(); });
+  function buildNav(){""")
+rep(r"""    tb.style.gridTemplateColumns = "repeat(" + list.length + ", minmax(0, 1fr))";""", r"""    const pl = el("button",{type:"button", class:"tab-plus", "data-act":"plus", "aria-label":"Criar demanda", "aria-haspopup":"menu", "aria-expanded":"false", onclick:togglePlus}, el("span",{class:"tp-i"}, icon("plus")));
+    pl.hidden = !canWrite; tb.insertBefore(pl, tb.children[2] || null);
+    tb.style.gridTemplateColumns = "none";""")
+rep(r"""    $$('[data-act="new"]').forEach(b => b.hidden = !canWrite);""", r"""    $$('[data-act="new"]').forEach(b => b.hidden = !canWrite);
+    $$('[data-act="plus"]').forEach(b => b.hidden = !canWrite); if (!canWrite) closePlus();""")
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
 
+css_extra += """
+@media (max-width:860px){
+.tabbar{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+.fab{display:none!important}
+.tabbar .tab-plus{padding:0;justify-content:center;align-items:center}
+.tab-plus .tp-i{width:56px;height:42px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 78%,var(--fed)));color:var(--surface);box-shadow:0 8px 20px -8px color-mix(in srgb,var(--ink) 70%,transparent);transition:transform .22s cubic-bezier(.3,1.4,.4,1)}
+.tabbar .tab-plus svg{width:24px;height:24px;transition:transform .25s cubic-bezier(.3,1.4,.4,1)}
+.tabbar .tab-plus:active .tp-i{transform:scale(.94)}
+.tabbar .tab-plus.open svg{transform:rotate(45deg)}
+.pm{position:fixed;inset:0;z-index:55}
+body.pm-open .tabbar{z-index:60}
+.pm-scrim{position:absolute;inset:0;background:rgba(10,14,12,.36);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:pmFade .16s ease-out}
+.pm-box{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);width:min(88vw,340px);background:var(--surface);border-radius:24px;padding:8px;box-shadow:0 24px 60px -12px rgba(0,0,0,.5);display:grid;gap:2px;animation:pmIn .18s cubic-bezier(.3,1.2,.4,1)}
+.pm-i{display:flex;align-items:center;gap:14px;border:0;background:none;color:var(--ink);text-align:left;padding:11px 12px;border-radius:17px;width:100%;cursor:pointer}
+.pm-i:active{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.pm-ic{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.pm-ic svg{width:22px;height:22px}
+.pm-t{display:grid;gap:1px}.pm-t b{font-size:16px;font-weight:700}.pm-t small{color:var(--muted);font-size:13px}
+@keyframes pmIn{from{transform:translateX(-50%) translateY(14px) scale(.97)}}
+@keyframes pmFade{from{opacity:.55}}
+}
+"""
 css_extra += """
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}

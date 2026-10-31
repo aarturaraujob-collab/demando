@@ -27,7 +27,7 @@ async def main():
         chk("sino, nome e data na mesma altura", g['sino'] and abs(g['sino']['y']-br['y'])<=14 and abs(g['data']['y']-br['y'])<=14)
         await A.screenshot(path="ui2_topo.png")
         print("== ORDEM DOS DADOS NO CARD (Agenda)")
-        await A.click("#tabbar [data-view=agenda]"); await A.wait_for_timeout(1200)
+        await A.click("#tabbar [data-view=today]"); await A.wait_for_timeout(1200)
         r=await A.evaluate("""() => { const row=[...document.querySelectorAll('.rw')].find(r=>r.querySelector('.prog')&&r.querySelector('.when')&&r.querySelector('.avs')); if(!row) return null;
           const y=s=>Math.round(row.querySelector(s).getBoundingClientRect().top), x=s=>Math.round(row.querySelector(s).getBoundingClientRect().left);
           return {titulo: row.querySelector('.tt').textContent.slice(0,40), yStatus:y('.sc'), yProg:y('.prog'), yWhen:y('.when'), yEquipe:y('.avs'), xStatus:x('.sc'), xProg:x('.prog'), linhas:row.querySelectorAll('.body > .meta').length}; }""")

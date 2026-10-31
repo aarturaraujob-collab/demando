@@ -3783,8 +3783,9 @@ dialog.mvd{border:0;border-radius:26px;padding:0;margin:auto;inset:0;width:min(9
     })();
   }
   /* aviso de mudança: só no painel do Claude (no app novo existe window.DEMANDO_API; em teste local não aparece) */
+  const AVISO_MUDANCA = false;   // ligar (true) só na virada de verdade: o app novo ainda está em desenvolvimento
   (function(){
-    if (window.DEMANDO_API || /^(localhost|127\.|\[::1\]|)$/.test(location.hostname)) return;
+    if (!AVISO_MUDANCA || window.DEMANDO_API || /^(localhost|127\.|\[::1\]|)$/.test(location.hostname)) return;
     const dl = document.getElementById("movedDlg"); if (!dl || !dl.showModal) return;
     document.getElementById("movedNo").addEventListener("click", () => dl.close());
     setTimeout(() => { try { dl.showModal(); } catch(e){} }, 900);
