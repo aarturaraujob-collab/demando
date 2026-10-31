@@ -2257,7 +2257,7 @@ body.picker #areaBanner{display:none!important}
   function drawAreaHead(ctx, k, x, y){
     if (!logoOk(k)) return false; const L = LOGOS[k];
     if (L.plate){ drawAreaLogo(ctx, k, x, y - 16, 46); return true; }
-    const w = drawAreaLogo(ctx, k, x, y - 10, 62); ctx.save(); ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText((L.nome || "").toUpperCase(), x + w + 16, y + 21); ctx.restore(); return true;
+    drawAreaLogo(ctx, k, x, y - 10, 62); return true;
   }
   // cabeçalho das imagens com todas as áreas: as logos ao lado da marca do Demandô
   function drawLogosAoLado(ctx, x, y){

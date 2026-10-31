@@ -71,7 +71,7 @@ rep(r"""mais:renderMais})[view](); }""", r"""mais:renderMais})[view](); if (wind
 # 11) logo da Prefeitura de Boca da Mata no banner da área BM
 rep(r"""    ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));""", r"""    ab.classList.toggle("logo", k === "asc" || k === "fed"); ab.classList.toggle("logo-bm", k === "asc"); ab.classList.toggle("logo-faf", k === "fed");
     if (k === "asc") ab.replaceChildren(el("img",{class:"abn-logo", src:"assets/bm-logo.png", alt:"", draggable:"false"}), el("span",{class:"abn-sr"}, NOME_FR[k] || "Boca da Mata"));
-    else if (k === "fed") ab.replaceChildren(el("img",{class:"abn-emb", src:"assets/faf-emblem.png", alt:"", draggable:"false"}), el("b",{class:"abn-fn"}, "Federação Alagoana de Futebol"));
+    else if (k === "fed") ab.replaceChildren(el("img",{class:"abn-emb", src:"assets/faf-emblem.png", alt:"", draggable:"false"}), el("span",{class:"abn-sr"}, "Federação Alagoana de Futebol"));
     else ab.replaceChildren(el("span",{class:"abn-s"}, LBL[k]), el("b",{class:"abn-n"}, NOME_FR[k] || SUB[k] || ""));""")
 
 # 5) monta a página
@@ -87,7 +87,7 @@ css_extra += """
 .abn.logo{padding:14px 18px}
 .abn.logo-bm{background:linear-gradient(135deg,#0B5E3B,#0E7A4D 70%,#12935C);box-shadow:0 10px 28px -14px rgba(14,122,77,.7)}
 .abn.logo-faf{background:linear-gradient(135deg,#2346C9,#2F5BEA 70%,#4F78F0);box-shadow:0 10px 28px -14px rgba(47,91,234,.7);gap:14px}
-.abn-emb{height:52px;width:auto;display:block;flex:none}
+.abn-emb{height:56px;width:auto;display:block;flex:none;margin:0 auto}
 .abn-fn{color:#fff;font:700 18px/1.15 var(--display);letter-spacing:-.01em;text-align:left}
 .tag.fed{background-image:url(assets/faf-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:29px}
 .abn-logo{height:46px;width:auto;max-width:100%;display:block}

@@ -1,4 +1,4 @@
-"""Logos da FAF e da BM (banner e etiquetas), nos temas claro e escuro, pra admin e pra funcionário. App local em http://localhost:8766.
+"""Logos da FAF e da BM (banner centralizado, etiquetas, escudo sem contorno), nos temas claro e escuro. App local em http://localhost:8766.
 Uso: SB=<token> ADMIN_SENHA=<senha> CODIGO_EQUIPE=<código> python3 tests/logos_test.py"""
 import asyncio, os, json, requests
 from playwright.async_api import async_playwright
@@ -22,7 +22,9 @@ async def main():
         await entra(pg,"admin",ADMIN)
         await pg.click("#mFr button[data-fr=fed]"); await pg.wait_for_timeout(1200); r=await pg.evaluate(BANNER)
         chk("aba FAF: banner azul com o escudo da FAF (imagem carregada)", r and 'logo-faf' in r['classe'] and r['img'], r)
-        chk("aba FAF: o nome 'Federação Alagoana de Futebol' aparece", r and 'Federação Alagoana de Futebol' in r['texto'])
+        g=await pg.evaluate("(()=>{const b=document.querySelector('#areaBanner'), i=b.querySelector('img.abn-emb'); const rb=b.getBoundingClientRect(), ri=i.getBoundingClientRect(); const visivel=[...b.children].filter(e=>!e.classList.contains('abn-sr') && (e.innerText||'').trim()); const sr=b.querySelector('.abn-sr'); return {dx: Math.round((ri.left+ri.right)/2-(rb.left+rb.right)/2), textoVisivel: visivel.length, srEscondido: !sr || sr.getBoundingClientRect().width<=1, altura: Math.round(ri.height)}})()")
+        chk("aba FAF: escudo CENTRALIZADO no quadro", abs(g['dx'])<=2, g)
+        chk("aba FAF: nenhum nome escrito ao lado (só o escudo)", g['textoVisivel']==0 and g['srEscondido'], g)
         t=await pg.evaluate("(()=>{const tg=document.querySelector('.rw .tag.fed'); return !!tg && getComputedStyle(tg).backgroundImage.includes('faf-emblem.png')})()"); chk("etiqueta 'FAF' dos cards leva o escudo", t)
         await pg.evaluate("window.scrollTo(0,0)"); await pg.screenshot(path=f"faf_{tema}_fed.png")
         await pg.click("#mFr button[data-fr=asc]"); await pg.wait_for_timeout(1000); r=await pg.evaluate(BANNER)
@@ -31,6 +33,11 @@ async def main():
         await pg.click("#mFr button[data-fr=all]"); await pg.wait_for_timeout(900); await pg.click("#tabbar [data-view=agenda]"); await pg.wait_for_timeout(1200); await pg.screenshot(path=f"faf_{tema}_agenda.png")
         chk("sem área escolhida ('Todas'): sem banner", await pg.evaluate("(()=>{const b=document.querySelector('#areaBanner'); return !b || b.hidden})()"))
         await ctx.close()
+      print("\n######## ARQUIVO DO ESCUDO")
+      import io
+      from PIL import Image; import numpy as np
+      raw=requests.get(URL.rsplit('/',1)[0]+"/assets/faf-emblem.png").content; A=np.array(Image.open(io.BytesIO(raw)).convert('RGBA')); op=A[:,:,3]>200; pad=np.pad(op,1); viz=pad[:-2,1:-1]&pad[2:,1:-1]&pad[1:-1,:-2]&pad[1:-1,2:]&op; px=A[op&~viz][:,:3].astype(int)
+      chk("escudo sem contorno branco (a borda é da cor da logo)", ((px.min(axis=1)>220).mean())<0.02, f"{(px.min(axis=1)>220).mean():.1%} da borda é branca")
       print("\n######## funcionário da FAF")
       requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Func Faf","usuario":"tst.ff","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.ff'")[0]['id']
       sql(f"update public.pessoas set papel='membro' where id='{uid}'"); sql(f"insert into public.acessos values ('{uid}','fed')")
