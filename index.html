@@ -1549,6 +1549,7 @@ body.picker #areaBanner{display:none!important}
   const stKey = st => ({"A fazer":"s0","Em produção":"s1","Entregue":"s3"})[st] || "s0";
   const statusChip = it => el("span",{class:"sc " + stKey(it.status)}, it.status === "Entregue" ? icon("check") : el("i",{class:"ring"}), it.status);
   const urgCls = it => isLate(it) ? " late" : (isOpen(it) && it.prazo === todayStr() ? " today" : "");
+  const linha = (...xs) => { const k = xs.filter(Boolean); return k.length ? el("span",{class:"meta"}, ...k) : null; };
   function row(it, opts){
     opts = opts || {};
     const si = STATUS.indexOf(it.status), next = STATUS[si+1];
@@ -1557,17 +1558,10 @@ body.picker #areaBanner{display:none!important}
       el("span",{class:"tile"}, icon(tipoIcon(it.tipo))),
       el("button",{class:"body", onclick:()=>openDetail(it)},
         el("span",{class:"tt"}, it.titulo),
-        el("span",{class:"meta"},
-          el("span",{class:"tag "+it.frente}, LBL[it.frente]),
-          el("span",null, it.tipo || "Outro"),
-          it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it),
-          statusChip(it),
-          opts.noDue ? null : dueEl(it),
-          quandoEl(it),
-          isNew(it) ? el("span",{class:"novo"},"NOVO") : null,
-          progEl(it),
-          cmcEl(it),
-          avsEl(it))),
+        linha(el("span",{class:"tag "+it.frente}, LBL[it.frente]), el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
+        linha(statusChip(it), progEl(it), cmcEl(it), isNew(it) ? el("span",{class:"novo"},"NOVO") : null),
+        linha(opts.noDue ? null : dueEl(it), quandoEl(it)),
+        linha(avsEl(it))),
       hasSt ? el("button",{class:"st " + stKey(it.status), title:"Mover para "+next, onclick:()=>setStatus(it,next)}, it.status) : null,
       podeAprovar(it) ? el("div",{class:"ap-g"}, ...apBtns(it)) : (canWrite && isOpen(it) ? el("button",{class:"done-b", title:"Marcar como entregue", "aria-label":"Marcar como entregue", onclick:()=>setStatus(it,"Entregue")}, icon("check")) : null)
     );

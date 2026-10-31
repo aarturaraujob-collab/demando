@@ -48,8 +48,20 @@ rep('  function panelSenha(box){', open(os.path.join(aqui, "pessoas_panel.js"), 
 # 6) leitura por IA: mensagens próprias do servidor (o painel original fala em "Claude")
 rep('    not_granted: "Sem permissão pra ler a foto. Libere o acesso ao Claude no menu do painel e tente de novo.",', '    not_configured: "A leitura por foto e texto ainda não foi ativada neste servidor. Falta a chave da Anthropic: fale com o admin.",\n    not_granted: "Sem permissão pra usar a leitura por IA. Fale com o admin.",')
 
+
+# 7) "Quem é você?": só nomes da equipe das áreas da pessoa, e o nome escolhido vira o "nome na equipe" (é ele que recebe as notificações)
+rep('  function chooser(){', '  function nomesDoUsuario(){ const ks = (window.DEMANDO_API && window.DEMANDO_API.areas) || []; const l = Array.from(new Set(ks.flatMap(k => EQUIPES[k] || []))); return l.length ? l : TODOS; }\n  function chooser(){')
+rep('guess = TODOS.find(n => norm(n) === nm) || "";', 'guess = nomesDoUsuario().find(n => norm(n) === nm) || "";')
+rep('...TODOS.map(n => el("button",{type:"button", class:"who-b"', '...nomesDoUsuario().map(n => el("button",{type:"button", class:"who-b"')
+rep('saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); }, 400);', 'saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome); }, 400);')
+rep('onclick:async e => { try { await Notification.requestPermission(); } catch(_){} e.currentTarget.remove(); }', 'onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }')
+
+
+# 8) o funcionário que ainda não escolheu o nome vê o cartão "Quem é você?" logo no topo do Início
+rep('    $("#meHold").replaceChildren(); renderAreaBanner();', '    $("#meHold").replaceChildren(); renderAreaBanner();\n    if (view === "today" && role === "staff" && !meNome && !(PERFIS[staffFr] || []).length && nomesDoUsuario().length) $("#meHold").append(chooser());')
+
 # 5) monta a página
-css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n"
+css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
 h2 = h.replace(m.group(0), '<script type="text/plain" id="appcode">\n' + app + '</script>\n</body>')
 h2 = h2.replace("</style>", css_extra + "</style>", 1)
 libs = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>\n<script src="config.js"></script>\n<script src="adapter.js"></script>\n'

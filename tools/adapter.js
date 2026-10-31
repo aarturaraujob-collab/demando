@@ -7,6 +7,7 @@ const CFG = window.DEMANDO;
 const sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
 const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sair: async () => { try { if (API.sinoSair) await API.sinoSair(); await sb.auth.signOut(); } catch(e){} location.reload(); } };
 let UID = null;
+API.guardarNomeEquipe = async nome => { try { if (!nome || !UID || (API.pessoa && API.pessoa.nome_equipe === nome)) return; const r = await sb.from("pessoas").update({ nome_equipe:nome }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = nome; } catch(e){} };
 
 /* ---------- utilidades ---------- */
 const nz = v => (v === "" || v === undefined || v === null) ? null : v;
@@ -199,10 +200,11 @@ function telaAviso(titulo, texto, extra){ tela(h("h2", null, titulo), h("p", { c
 
 /* ---------- notificações no celular (sininho) ---------- */
 function iniciarSino(){
-  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window) || !CFG.vapid) return;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const temPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!CFG.vapid;
+  if (!temPush && !ios) return;           // no iPhone o sino aparece sempre: sem o app instalado, ele explica como instalar
   const st = document.createElement("style");
-  st.textContent = '#sino{position:absolute;z-index:30;width:40px;height:40px;border-radius:14px;border:0;display:grid;place-items:center;background:var(--surface,#fff);color:var(--muted,#5E6B66);box-shadow:0 1px 2px rgba(18,26,23,.06),0 8px 24px rgba(18,26,23,.06);cursor:pointer}#sino.on{background:var(--ink,#121A17);color:var(--bg,#F3F4F1)}#sino svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.mtop #sino{right:64px;top:50%;transform:translateY(-50%)}.side #sino{right:12px;top:22px}#sinoT{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--ink,#121A17);color:var(--bg,#F3F4F1);padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:99;max-width:88vw;text-align:center}';
+  st.textContent = '#sino{position:absolute;z-index:30;width:40px;height:40px;border-radius:14px;border:0;display:grid;place-items:center;background:var(--surface,#fff);color:var(--muted,#5E6B66);box-shadow:0 1px 2px rgba(18,26,23,.06),0 8px 24px rgba(18,26,23,.06);cursor:pointer}#sino.on{background:var(--ink,#121A17);color:var(--bg,#F3F4F1)}#sino svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.mtop #sino{left:14px;top:50%;transform:translateY(-50%)}body:not(.sem-voltar) .mtop #sino{left:62px}.side #sino{right:12px;top:22px}#sinoT{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--ink,#121A17);color:var(--bg,#F3F4F1);padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:99;max-width:88vw;text-align:center}';
   document.head.append(st);
   const b = document.createElement("button"); b.id = "sino"; b.type = "button"; b.setAttribute("aria-label", "Notificações neste aparelho");
   b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/></svg>';
@@ -215,6 +217,7 @@ function iniciarSino(){
   API.sinoSair = async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s){ await sb.from("push_subs").delete().eq("endpoint", s.endpoint); } } catch(e){} };
   b.addEventListener("click", async () => {
     try {
+      if (!temPush){ dica("No iPhone, instale o app (Compartilhar → Adicionar à Tela de Início) e ative por ele."); return; }
       const reg = await navigator.serviceWorker.ready, atual = await reg.pushManager.getSubscription();
       if (atual){ await sb.from("push_subs").delete().eq("endpoint", atual.endpoint); await atual.unsubscribe(); marca(false); dica("Notificações desligadas neste aparelho"); return; }
       if (ios && !standalone){ dica("No iPhone, instale o app (Compartilhar → Adicionar à Tela de Início) e ative por ele."); return; }
@@ -225,6 +228,7 @@ function iniciarSino(){
     } catch(e){ dica("Não deu pra ativar as notificações agora."); }
   });
   pos(); window.addEventListener("resize", pos); setTimeout(pos, 800);
+  if (!temPush){ marca(false); return; }
   (async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s && Notification.permission === "granted"){ await salvar(s); marca(true); } else marca(false); } catch(e){ marca(false); } })();
 }
 
@@ -246,6 +250,7 @@ async function seguir(){
     if (admin){ localStorage.setItem("cd-adm", "ADM"); localStorage.removeItem("cd-fr"); localStorage.removeItem("cd-frh"); }
     else { localStorage.removeItem("cd-adm"); const atual = localStorage.getItem("cd-fr"); const fr = visiveis.includes(atual) ? atual : visiveis[0]; localStorage.setItem("cd-fr", fr); localStorage.setItem("cd-frh", "T"); }
   } catch(e){}
+  try { if (p.data.nome_equipe){ const cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); if (!cur.nome){ cur.nome = p.data.nome_equipe; localStorage.setItem("cd-me", JSON.stringify(cur)); } } } catch(e){}
   document.body.classList.toggle("sem-voltar", admin || visiveis.length < 2); document.body.classList.toggle("e-admin", admin);
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
   const s = document.createElement("script"); s.textContent = document.getElementById("appcode").textContent; document.body.append(s);

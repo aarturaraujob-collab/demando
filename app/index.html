@@ -1019,6 +1019,7 @@ body.picker #areaBanner{display:none!important}
 .shot-nl{flex:1;text-align:center;font-weight:700;font-size:15px}
 
 .sem-voltar #backTop,.sem-voltar #backD{display:none!important}
+@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}
 </style>
 </head>
 <body>
@@ -1562,6 +1563,7 @@ body.picker #areaBanner{display:none!important}
   const stKey = st => ({"A fazer":"s0","Em produção":"s1","Entregue":"s3"})[st] || "s0";
   const statusChip = it => el("span",{class:"sc " + stKey(it.status)}, it.status === "Entregue" ? icon("check") : el("i",{class:"ring"}), it.status);
   const urgCls = it => isLate(it) ? " late" : (isOpen(it) && it.prazo === todayStr() ? " today" : "");
+  const linha = (...xs) => { const k = xs.filter(Boolean); return k.length ? el("span",{class:"meta"}, ...k) : null; };
   function row(it, opts){
     opts = opts || {};
     const si = STATUS.indexOf(it.status), next = STATUS[si+1];
@@ -1570,17 +1572,10 @@ body.picker #areaBanner{display:none!important}
       el("span",{class:"tile"}, icon(tipoIcon(it.tipo))),
       el("button",{class:"body", onclick:()=>openDetail(it)},
         el("span",{class:"tt"}, it.titulo),
-        el("span",{class:"meta"},
-          el("span",{class:"tag "+it.frente}, LBL[it.frente]),
-          el("span",null, it.tipo || "Outro"),
-          it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it),
-          statusChip(it),
-          opts.noDue ? null : dueEl(it),
-          quandoEl(it),
-          isNew(it) ? el("span",{class:"novo"},"NOVO") : null,
-          progEl(it),
-          cmcEl(it),
-          avsEl(it))),
+        linha(el("span",{class:"tag "+it.frente}, LBL[it.frente]), el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
+        linha(statusChip(it), progEl(it), cmcEl(it), isNew(it) ? el("span",{class:"novo"},"NOVO") : null),
+        linha(opts.noDue ? null : dueEl(it), quandoEl(it)),
+        linha(avsEl(it))),
       hasSt ? el("button",{class:"st " + stKey(it.status), title:"Mover para "+next, onclick:()=>setStatus(it,next)}, it.status) : null,
       podeAprovar(it) ? el("div",{class:"ap-g"}, ...apBtns(it)) : (canWrite && isOpen(it) ? el("button",{class:"done-b", title:"Marcar como entregue", "aria-label":"Marcar como entregue", onclick:()=>setStatus(it,"Entregue")}, icon("check")) : null)
     );
@@ -1775,6 +1770,7 @@ body.picker #areaBanner{display:none!important}
       if (meNome && pessoa !== meNome && EQUIPES[staffFr].includes(meNome) && !(PERFIS[staffFr] || []).length){ pessoa = meNome; fillPessoa(); }
     }
     $("#meHold").replaceChildren(); renderAreaBanner();
+    if (view === "today" && role === "staff" && !meNome && !(PERFIS[staffFr] || []).length && nomesDoUsuario().length) $("#meHold").append(chooser());
     syncChrome(); renderSum(); renderView();
   }
 
@@ -3375,7 +3371,7 @@ body.picker #areaBanner{display:none!important}
     const data = {nome: meNome, vistos: Array.from(vistos).slice(-600)};
     try { localStorage.setItem("cd-me", JSON.stringify(data)); } catch(e){}
     clearTimeout(saveT);
-    saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); }, 400);
+    saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome); }, 400);
   }
   const mineOf = nome => items.filter(i => nome && team(i).includes(nome));
   const naoVisto = i => !vistos.has(i.id) || (i.ajusteEm && !vistos.has(i.id + "@" + i.ajusteEm));
@@ -3398,18 +3394,19 @@ body.picker #areaBanner{display:none!important}
         el("div",{class:"hs"}, el("b",null, open.filter(i => i.prazo === todayStr()).length), el("span",null,"Para hoje")),
         el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas"))),
       el("div",{class:"hello-a"},
-        ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:async e => { try { await Notification.requestPermission(); } catch(_){} e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
+        ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
         el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; render(); }}, "Ver todas as demandas")));
     return box;
   }
+  function nomesDoUsuario(){ const ks = (window.DEMANDO_API && window.DEMANDO_API.areas) || []; const l = Array.from(new Set(ks.flatMap(k => EQUIPES[k] || []))); return l.length ? l : TODOS; }
   function chooser(){
     let guess = "";
     const nm = norm(nameCache[myId] || "").split(/\s+/)[0];
-    if (nm) guess = TODOS.find(n => norm(n) === nm) || "";
+    if (nm) guess = nomesDoUsuario().find(n => norm(n) === nm) || "";
     return el("section",{class:"who-pick"},
       el("b",null,"Quem é você?"),
       el("p",{class:"hint"},"Escolha seu nome pra ver as demandas em que você foi escalado. Isso fica salvo só pra você."),
-      el("div",{class:"who-g"}, ...TODOS.map(n => el("button",{type:"button", class:"who-b" + (n === guess ? " sug" : ""), onclick:() => setMe(n)},
+      el("div",{class:"who-g"}, ...nomesDoUsuario().map(n => el("button",{type:"button", class:"who-b" + (n === guess ? " sug" : ""), onclick:() => setMe(n)},
         el("span",{class:"av " + avColor(n)}, ini(n)), n, n === guess ? el("small",null,"é você?") : null))));
   }
   function pinRow(it){ const r = row(it); r.classList.add("pinned"); r.prepend(el("span",{class:"pin", title:"Nova escala"}, icon("pin"))); return r; }
