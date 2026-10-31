@@ -299,6 +299,14 @@ function iniciarAnexos(){
   }, true);
 }
 
+/* ---------- logos pras imagens e relatórios ---------- */
+function carregarLogos(){
+  const ld = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+  return Promise.all([ld("assets/bm-logo.png"), ld("assets/faf-emblem.png")]).then(([bm, fed]) => {
+    const L = {}; if (bm) L.asc = { img: bm, plate: ["#0B5E3B", "#0E7A4D", "#12935C"], nome: "Boca da Mata" }; if (fed) L.fed = { img: fed, nome: "Federação Alagoana de Futebol" }; return L;
+  }).catch(() => ({}));
+}
+
 /* ---------- depois de entrar ---------- */
 async function seguir(){
   tela(h("p", { class:"gs" }, "Carregando…"));
@@ -320,6 +328,7 @@ async function seguir(){
   try { if (p.data.nome_equipe){ const cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); if (!cur.nome){ cur.nome = p.data.nome_equipe; localStorage.setItem("cd-me", JSON.stringify(cur)); } } } catch(e){}
   document.body.classList.toggle("sem-voltar", admin || visiveis.length < 2); document.body.classList.toggle("e-admin", admin);
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
+  window.DEMANDO_LOGOS = await carregarLogos();
   const s = document.createElement("script"); s.textContent = document.getElementById("appcode").textContent; document.body.append(s);
   iniciarSino();
   iniciarAnexos();

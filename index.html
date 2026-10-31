@@ -2240,6 +2240,29 @@ body.picker #areaBanner{display:none!important}
     ctx.strokeStyle = SH.ink; ctx.lineWidth = 15; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(new Path2D("M20 27 L38 11 L56 27"));
     ctx.restore();
   }
+  /* logos das áreas nas imagens e no relatório (só aparecem onde a página fornece window.DEMANDO_LOGOS: no painel do Claude fica tudo como era) */
+  const LOGOS = window.DEMANDO_LOGOS || {};
+  const logoOk = k => !!(LOGOS[k] && LOGOS[k].img && LOGOS[k].img.naturalWidth);
+  const wordmarkW = (ctx, fs) => { ctx.save(); ctx.font = "800 " + fs + "px Geist, Inter, system-ui, sans-serif"; const w = ctx.measureText("Demand").width + fs * 0.03 + 76 * (fs / 108); ctx.restore(); return w; };
+  function logoW(k, h){ if (!logoOk(k)) return 0; const L = LOGOS[k], lw = Math.round(h * L.img.naturalWidth / L.img.naturalHeight); return L.plate ? lw + Math.round(h * 0.28) * 2 : lw; }
+  function drawAreaLogo(ctx, k, x, y, h){
+    if (!logoOk(k)) return 0; ctx.save(); try { return drawAreaLogo2(ctx, k, x, y, h); } finally { ctx.restore(); }
+  }
+  function drawAreaLogo2(ctx, k, x, y, h){
+    const L = LOGOS[k], lw = Math.round(h * L.img.naturalWidth / L.img.naturalHeight);
+    if (L.plate){ const pad = Math.round(h * 0.28), w = lw + pad * 2, hh = h + pad * 2, g = ctx.createLinearGradient(x, y, x + w, y + hh); L.plate.forEach((c, i) => g.addColorStop(i / (L.plate.length - 1), c)); ctx.fillStyle = g; rr(ctx, x, y, w, hh, Math.round(hh * 0.26)); ctx.fill(); ctx.drawImage(L.img, x + pad, y + pad, lw, h); return w; }
+    ctx.drawImage(L.img, x, y, lw, h); return lw;
+  }
+  // cabeçalho das imagens quando há uma área só: logo da área no lugar do quadradinho colorido + nome (false = não há logo, desenha como antes)
+  function drawAreaHead(ctx, k, x, y){
+    if (!logoOk(k)) return false; const L = LOGOS[k];
+    if (L.plate){ drawAreaLogo(ctx, k, x, y - 16, 46); return true; }
+    const w = drawAreaLogo(ctx, k, x, y - 10, 62); ctx.save(); ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText((L.nome || "").toUpperCase(), x + w + 16, y + 21); ctx.restore(); return true;
+  }
+  // cabeçalho das imagens com todas as áreas: as logos ao lado da marca do Demandô
+  function drawLogosAoLado(ctx, x, y){
+    let lx = x; ["fed", "asc"].forEach(k => { if (!logoOk(k)) return; ctx.save(); ctx.fillStyle = SH.line; ctx.fillRect(lx - 22, y - 2, 2, 50); ctx.restore(); const w = drawAreaLogo(ctx, k, lx, k === "asc" ? y - 6 : y - 4, k === "asc" ? 28 : 52); lx += w + 44; });
+  }
   /* ---------- Cronograma do mês e pessoas escaladas nas imagens ---------- */
   const AVC = ["#2F5D8C","#8C4A2F","#5B4A8C","#2F7A6B","#8C2F5B","#6B6B2F","#4A5560"];
   function pessoasTxt(it){
@@ -2325,9 +2348,11 @@ body.picker #areaBanner{display:none!important}
     const ctx = cv.getContext("2d");
     ctx.fillStyle = SH.bg; ctx.fillRect(0, 0, W, H);
     if (one){
-      ctx.fillStyle = tone; ctx.fillRect(P, P, 40, 40);
-      ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(NOME_FR[fr].toUpperCase(), P + 56, P + 21); ctx.textBaseline = "alphabetic";
-    } else { drawMark(ctx, P, P - 3, 48); drawWordmark(ctx, P + 64, P + 36, 38); }
+      if (!drawAreaHead(ctx, fr, P, P)){
+        ctx.fillStyle = tone; ctx.fillRect(P, P, 40, 40);
+        ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(NOME_FR[fr].toUpperCase(), P + 56, P + 21); ctx.textBaseline = "alphabetic";
+      }
+    } else { drawMark(ctx, P, P - 3, 48); drawWordmark(ctx, P + 64, P + 36, 38); drawLogosAoLado(ctx, P + 64 + wordmarkW(ctx, 38) + 48, P); }
     ctx.fillStyle = SH.ink; ctx.font = "700 84px " + DISP; ctx.fillText("Cronograma do mês", P, P + 128);
     const scope = (one ? [fr === "fed" ? "Marketing" : fr === "asc" ? "Comunicação" : "", fr === "asc" ? secF : "", pessoa, shotPerf] : [siglasTxt(), secF, pessoa, shotPerf]).filter(Boolean).join(" · ");
     ctx.textAlign = "right"; ctx.font = "700 34px " + DISP; ctx.fillStyle = SH.ink; ctx.fillText((MESES[M - 1] + " de " + Y).toUpperCase(), W - P, P + 34);
@@ -2424,10 +2449,12 @@ body.picker #areaBanner{display:none!important}
     const NOME = NOME_FR;
     const one = fr !== "all", tone = one ? areaHex(fr) : SH.ink;
     if (one){
-      ctx.fillStyle = tone; ctx.fillRect(P, P, 40, 40);
-      ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(NOME[fr].toUpperCase(), P + 56, P + 21); ctx.textBaseline = "alphabetic";
-    } else { drawMark(ctx, P, P - 3, 48); drawWordmark(ctx, P + 64, P + 36, 38); }
-    ctx.font = "700 84px " + DISP; ctx.fillText("Demandas da semana", P, P + 128);
+      if (!drawAreaHead(ctx, fr, P, P)){
+        ctx.fillStyle = tone; ctx.fillRect(P, P, 40, 40);
+        ctx.fillStyle = SH.ink; ctx.font = "700 28px " + DISP; ctx.textBaseline = "middle"; ctx.fillText(NOME[fr].toUpperCase(), P + 56, P + 21); ctx.textBaseline = "alphabetic";
+      }
+    } else { drawMark(ctx, P, P - 3, 48); drawWordmark(ctx, P + 64, P + 36, 38); drawLogosAoLado(ctx, P + 64 + wordmarkW(ctx, 38) + 48, P); }
+    ctx.fillStyle = SH.ink; ctx.font = "700 84px " + DISP; ctx.fillText("Demandas da semana", P, P + 128);
     const f1 = toDate(mon), f2 = toDate(sun), mes = d => d.toLocaleDateString("pt-BR",{month:"long"});
     const range = f1.getMonth() === f2.getMonth() ? f1.getDate() + " a " + f2.getDate() + " de " + mes(f2) : f1.getDate() + " de " + mes(f1) + " a " + f2.getDate() + " de " + mes(f2);
     const scope = (one ? [fr === "fed" ? "Marketing" : fr === "asc" ? "Comunicação" : "", fr === "asc" ? secF : "", pessoa, shotPerf] : [siglasTxt(), secF, pessoa, shotPerf]).filter(Boolean).join(" · ");
@@ -3150,7 +3177,9 @@ body.picker #areaBanner{display:none!important}
       const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
       ctx = cv.getContext("2d"); ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, W, H); pages.push(cv);
       drawMark(ctx, P, P - 4, 52); drawWordmark(ctx, P + 70, P + 40, 40);
-      ctx.textAlign = "right"; ctx.font = "700 22px " + BODY; ctx.fillStyle = SH.muted; ctx.fillText("RELATÓRIO MENSAL", W - P, P + 34); ctx.textAlign = "left";
+      const lh = relArea === "asc" ? 40 : 64, lwid = logoW(relArea, lh), lxx = W - P - lwid;
+      if (lwid) drawAreaLogo(ctx, relArea, lxx, relArea === "asc" ? P - 14 : P - 12, lh);
+      ctx.textAlign = "right"; ctx.font = "700 22px " + BODY; ctx.fillStyle = SH.muted; ctx.fillText("RELATÓRIO MENSAL", lwid ? lxx - 28 : W - P, lwid ? (relArea === "asc" ? P + 25 : P + 28) : P + 34); ctx.textAlign = "left";
       if (first){ y = P + 52 + 56; }
       else { ctx.font = "600 24px " + BODY; ctx.fillStyle = SH.muted; ctx.fillText(mesTxt + " · " + (sec || todos), P, P + 112); ctx.fillStyle = SH.line; ctx.fillRect(P, P + 132, CW, 2); y = P + 172; }
     };
