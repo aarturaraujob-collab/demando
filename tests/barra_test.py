@@ -53,7 +53,7 @@ async def main():
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"tst.lb","SenhaForte123"); g=await pg.evaluate(BAR)
       chk("leitor NÃO tem o '+' (Início, Quadro, Mês, Minhas)", g['abas']==['today','board','month','minhas'], g['abas']); await ctx.close()
       print("\n######## QUEM TINHA A AGENDA SALVA")
-      bm_id=sql("select id from public.pessoas where usuario='bm'")[0]['id']; sql(f"insert into public.preferencias(pessoa_id, dados) values ('{bm_id}', '{{\"view\":\"agenda\"}}'::jsonb) on conflict (pessoa_id) do update set dados='{{\"view\":\"agenda\"}}'::jsonb")
+      bm_id=sql("select id from public.pessoas where usuario='bm'")[0]['id']; _pref=sql(f"select dados::text d from public.preferencias where pessoa_id='{bm_id}'"); _pref=_pref[0]['d'] if _pref else None; sql(f"insert into public.preferencias(pessoa_id, dados) values ('{bm_id}', '{{\"view\":\"agenda\"}}'::jsonb) on conflict (pessoa_id) do update set dados='{{\"view\":\"agenda\"}}'::jsonb")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"bm",CRED["bm"]); g=await pg.evaluate(BAR); chk("com a Agenda salva como última tela, abre no Início", g['ativa']=='today', g['ativa']); await ctx.close()
       print("\n######## DESKTOP")
       ctx=await b.new_context(viewport={"width":1280,"height":800}); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"admin",CRED["admin"])
@@ -62,5 +62,6 @@ async def main():
     finally:
       if uid: requests.delete(f"{BASE}/auth/v1/admin/users/{uid}", headers=SV)
       sql("delete from public.preferencias where pessoa_id=(select id from public.pessoas where usuario='bm')")
+      if '_pref' in dir() and _pref: sql("insert into public.preferencias(pessoa_id, dados) select id, $j$"+_pref+"$j$::jsonb from public.pessoas where usuario='bm'")
       print("\nerros de JS:", errs, "| usuários:", sql("select string_agg(usuario,',') u from public.pessoas")[0]['u']); print(f"RESULTADO: {sum(res)} de {len(res)}"); await b.close()
 asyncio.run(main())
