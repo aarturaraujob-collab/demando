@@ -1,10 +1,14 @@
 """Funcionário vê a equipe toda; aba Minhas; botão Minhas escalas no Mês; barrinha do admin com logos e divisórias; LIFE sem escudo da BM. App local em http://localhost:8766.
-Uso: SB=<token> ADMIN_SENHA=<..> BM_SENHA=<..> python3 tests/funcionario_test.py   (devolve o nome e as preferências da conta bm ao que eram)"""
+Uso: SB=<token> ADMIN_SENHA=<..> python3 tests/funcionario_test.py   (usa uma conta de teste que cria e apaga; não mexe na bm)"""
 import asyncio, os, requests
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; MG={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
+keys=requests.get(f"https://api.supabase.com/v1/projects/{REF}/api-keys?reveal=true", headers=MG).json(); SVC=[k['api_key'] for k in keys if k['name']=='service_role'][0]; SVH={"apikey":SVC,"Authorization":"Bearer "+SVC,"Content-Type":"application/json"}
 sql=lambda q: requests.post(f"https://api.supabase.com/v1/projects/{REF}/database/query", headers=MG, json={"query":q}).json()
 from playwright.async_api import async_playwright
 URL=os.environ.get("APP","http://localhost:8766/index.html"); res=[]
+def cria_func(usuario):
+    r=requests.post(f"https://{REF}.supabase.co/auth/v1/admin/users", headers=SVH, json={"email":f"demandasbm+{usuario}@gmail.com","password":"SenhaForte123","email_confirm":True,"user_metadata":{"nome":"Teste Funcionario","usuario":usuario}}); u=r.json()['id']
+    sql(f"update public.pessoas set papel='membro' where id='{u}'"); sql(f"insert into public.acessos values ('{u}','asc')"); return u
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:140] if d else ""))
 STUB="if(!('PushManager' in window)){window.PushManager=function(){};PushManager.prototype.getSubscription=async function(){return null};}"
 async def entra(pg,u,s):
@@ -13,12 +17,11 @@ LINHAS="""(nome) => { const rows=[...document.querySelectorAll('#view .rw')]; co
 async def main():
   async with async_playwright() as p:
     b=await p.webkit.launch(); dev=p.devices['iPhone 13']; errs=[]
-    antes=sql("select nome_equipe from public.pessoas where usuario='bm'")[0]['nome_equipe']; sql("update public.pessoas set nome_equipe=null where usuario='bm'")
-    pref=sql("select dados::text d from public.preferencias where pessoa_id=(select id from public.pessoas where usuario='bm')"); pref=pref[0]['d'] if pref else None; sql("delete from public.preferencias where pessoa_id=(select id from public.pessoas where usuario='bm')")
+    uid_fx=cria_func("tst.fx")   # conta descartável: nunca mexe na conta bm
     try:
       print("######## FUNCIONÁRIO DA BM · aparelho que tinha o filtro 'Juninho' gravado")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB+"localStorage.setItem('cd-prefs', JSON.stringify({view:'today', show:'asc', pessoa:'Juninho'}));"); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
-      await entra(pg,"bm",os.environ["BM_SENHA"])
+      await entra(pg,"tst.fx","SenhaForte123")
       chk("o filtro 'Juninho' gravado no aparelho NÃO volta (começa em 'Toda a equipe')", await pg.evaluate("document.querySelector('#pessoa').value===''"))
       chk("sem nome escolhido, o cartão 'Quem é você?' aparece e a lista é a da equipe toda", await pg.locator("#meHold .who-pick").count()==1 and (await pg.evaluate(LINHAS,"Juninho"))['semEle']>0)
       await pg.click(".who-b:has-text('Juninho')"); await pg.wait_for_timeout(1500)
@@ -65,8 +68,6 @@ async def main():
             await pg.click("#tabbar [data-view=month]"); await pg.wait_for_timeout(800); chk("admin não vê o botão 'Minhas escalas' no Mês", await pg.locator("#view .mm-seg").count()==0)
         await ctx.close()
     finally:
-      sql("update public.pessoas set nome_equipe=" + ("'"+antes+"'" if antes else "null") + " where usuario='bm'"); sql("delete from public.preferencias where pessoa_id=(select id from public.pessoas where usuario='bm')")
-      if pref: sql("insert into public.preferencias(pessoa_id, dados) select id, $j$"+pref+"$j$::jsonb from public.pessoas where usuario='bm'")
-      print("conta bm devolvida ao que era (nome:", antes, "| preferências:", "restauradas" if pref else "vazias", ")")
+      requests.delete(f"https://{REF}.supabase.co/auth/v1/admin/users/{uid_fx}", headers=SVH); print("conta de teste apagada (a conta bm não foi tocada)")
       print("\nerros de JS:", errs); print(f"RESULTADO: {sum(res)} de {len(res)}"); await b.close()
 asyncio.run(main())

@@ -3,3 +3,8 @@
 *.key
 export/
 node_modules/
+# capturas de tela e arquivos soltos que os testes geram (mostram dados reais: nunca versionar)
+/*.png
+/*.jpg
+/*.jpeg
+__pycache__/

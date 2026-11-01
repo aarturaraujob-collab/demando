@@ -1,12 +1,15 @@
 """Barra de baixo: sem Agenda, + em destaque no meio com 3 opções; admin, funcionário (5 abas, com Minhas), leitor e desktop. App local em http://localhost:8766.
-Uso: SB=<token> CODIGO_EQUIPE=<código> ADMIN_SENHA=<..> BM_SENHA=<..> FAF_SENHA=<..> python3 tests/barra_test.py"""
+Uso: SB=<token> CODIGO_EQUIPE=<código> ADMIN_SENHA=<..> python3 tests/barra_test.py"""
 import asyncio, os, json, requests
 from playwright.async_api import async_playwright
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
 sql=lambda s: requests.post(f"https://api.supabase.com/v1/projects/{REF}/database/query", headers=M, json={"query":s}).json()
 keys=requests.get(f"https://api.supabase.com/v1/projects/{REF}/api-keys?reveal=true", headers=M).json(); SERVICE=[k['api_key'] for k in keys if k['name']=='service_role'][0]; SV={"apikey":SERVICE,"Authorization":"Bearer "+SERVICE}
 URL=os.environ.get("APP","http://localhost:8766/index.html"); CODIGO=os.environ['CODIGO_EQUIPE']
-CRED={"admin":os.environ['ADMIN_SENHA'],"bm":os.environ['BM_SENHA'],"faf":os.environ['FAF_SENHA']}; res=[]
+CRED={"admin":os.environ['ADMIN_SENHA']}; res=[]
+def cria_func(usuario):   # conta descartável: os testes nunca mexem nas contas bm e faf
+    r=requests.post(f"{BASE}/auth/v1/admin/users", headers=SV, json={"email":f"demandasbm+{usuario}@gmail.com","password":"SenhaForte123","email_confirm":True,"user_metadata":{"nome":"Teste Barra","usuario":usuario}}); u=r.json()['id']
+    sql(f"update public.pessoas set papel='membro' where id='{u}'"); sql(f"insert into public.acessos values ('{u}','asc')"); return u
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:130] if d else ""))
 STUB="if(!('PushManager' in window)){window.PushManager=function(){};PushManager.prototype.getSubscription=async function(){return null};}"
 async def entra(pg,u,s):
@@ -43,8 +46,9 @@ async def main():
             async with pg.expect_file_chooser(timeout=6000) as fc: await pg.click("#plusMenu .pm-i[data-op=photo]")
             chk("'Por foto' abre a escolha de foto do aparelho", fc.value is not None)
         await ctx.close()
-      print("\n######## FUNCIONÁRIO DA BM")
-      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); await entra(pg,"bm",CRED["bm"]); g=await pg.evaluate(BAR)
+      print("\n######## FUNCIONÁRIO DA BM (conta descartável)")
+      uid_bx=cria_func("tst.bx")
+      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); await entra(pg,"tst.bx","SenhaForte123"); g=await pg.evaluate(BAR)
       chk("funcionário: Início, Quadro, + (no meio), Mês, Minhas (igual ao admin, sem Mais)", g['abas']==['today','board','+','month','minhas'], g['abas']); chk("funcionário: o '+' fica no CENTRO da barra, igual ao admin", g['dx'] is not None and abs(g['dx'])<=3, g['dx'])
       m=await menu(pg); chk("as 3 opções aparecem pro funcionário", m['itens']==["Nova demanda","Por texto","Por foto"], m['itens']); await pg.keyboard.press("Escape")
       await ctx.close()
@@ -53,15 +57,14 @@ async def main():
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"tst.lb","SenhaForte123"); g=await pg.evaluate(BAR)
       chk("leitor NÃO tem o '+' (Início, Quadro, Mês, Minhas)", g['abas']==['today','board','month','minhas'], g['abas']); await ctx.close()
       print("\n######## QUEM TINHA A AGENDA SALVA")
-      bm_id=sql("select id from public.pessoas where usuario='bm'")[0]['id']; _pref=sql(f"select dados::text d from public.preferencias where pessoa_id='{bm_id}'"); _pref=_pref[0]['d'] if _pref else None; sql(f"insert into public.preferencias(pessoa_id, dados) values ('{bm_id}', '{{\"view\":\"agenda\"}}'::jsonb) on conflict (pessoa_id) do update set dados='{{\"view\":\"agenda\"}}'::jsonb")
-      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"bm",CRED["bm"]); g=await pg.evaluate(BAR); chk("com a Agenda salva como última tela, abre no Início", g['ativa']=='today', g['ativa']); await ctx.close()
+      bm_id=uid_bx; sql(f"insert into public.preferencias(pessoa_id, dados) values ('{bm_id}', '{{\"view\":\"agenda\"}}'::jsonb) on conflict (pessoa_id) do update set dados='{{\"view\":\"agenda\"}}'::jsonb")
+      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"tst.bx","SenhaForte123"); g=await pg.evaluate(BAR); chk("com a Agenda salva como última tela, abre no Início", g['ativa']=='today', g['ativa']); await ctx.close()
       print("\n######## DESKTOP")
       ctx=await b.new_context(viewport={"width":1280,"height":800}); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"admin",CRED["admin"])
       d=await pg.evaluate("({lateral:[...document.querySelectorAll('#sideViews [data-view]')].map(e=>e.dataset.view), barra: getComputedStyle(document.querySelector('#tabbar')).display, novo: !!document.querySelector('[data-act=new]:not(.f1)') && document.querySelector('[data-act=new]:not(.f1)').offsetParent!==null})")
       chk("desktop: menu lateral sem Agenda (Início, Quadro, Mês, Mais)", d['lateral']==['today','board','month','mais'], d['lateral']); chk("desktop: sem barra de baixo e com o botão 'Nova demanda'", d['barra']=='none' and d['novo'], d); await ctx.close()
     finally:
       if uid: requests.delete(f"{BASE}/auth/v1/admin/users/{uid}", headers=SV)
-      sql("delete from public.preferencias where pessoa_id=(select id from public.pessoas where usuario='bm')")
-      if '_pref' in dir() and _pref: sql("insert into public.preferencias(pessoa_id, dados) select id, $j$"+_pref+"$j$::jsonb from public.pessoas where usuario='bm'")
+      if 'uid_bx' in dir(): requests.delete(f"{BASE}/auth/v1/admin/users/{uid_bx}", headers=SV)
       print("\nerros de JS:", errs, "| usuários:", sql("select string_agg(usuario,',') u from public.pessoas")[0]['u']); print(f"RESULTADO: {sum(res)} de {len(res)}"); await b.close()
 asyncio.run(main())

@@ -9,7 +9,7 @@ const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sai
 let UID = null;
 API.guardarNomeEquipe = async nome => { try { if (!nome || !UID || (API.pessoa && API.pessoa.nome_equipe === nome)) return; const r = await sb.from("pessoas").update({ nome_equipe:nome }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = nome; } catch(e){} };
 API.limparNomeEquipe = async () => { try { if (!UID) return; const r = await sb.from("pessoas").update({ nome_equipe:null }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = null; } catch(e){} };
-API.arquivar = async (id, sim) => { try { const r = await sb.from("demandas").update({ arquivada_em: sim ? new Date().toISOString() : null }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
+API.arquivar = async (id, sim) => { try { const agora = new Date().toISOString(), r = await sb.from("demandas").update(sim ? { arquivada_em: agora, desarquivada_em: null } : { arquivada_em: null, desarquivada_em: agora }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
 
 /* ---------- utilidades ---------- */
 const nz = v => (v === "" || v === undefined || v === null) ? null : v;
