@@ -1,5 +1,5 @@
-"""Teste completo do app (painel + Supabase). Sobe o app local: python3 -m http.server 8766 --directory app
-Uso: TZ=America/Maceio SB=<token Supabase> ADMIN_SENHA=<senha do admin> CODIGO_EQUIPE=<código> python3 tests/app_full_test.py"""
+"""Teste completo do app (painel + Supabase). App local em http://localhost:8766.
+Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/app_full_test.py"""
 import asyncio, os, requests, datetime, base64, json
 from playwright.async_api import async_playwright
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}

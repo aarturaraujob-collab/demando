@@ -8,6 +8,8 @@ const sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { persistSess
 const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sair: async () => { try { if (API.sinoSair) await API.sinoSair(); await sb.auth.signOut(); } catch(e){} location.reload(); } };
 let UID = null;
 API.guardarNomeEquipe = async nome => { try { if (!nome || !UID || (API.pessoa && API.pessoa.nome_equipe === nome)) return; const r = await sb.from("pessoas").update({ nome_equipe:nome }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = nome; } catch(e){} };
+API.limparNomeEquipe = async () => { try { if (!UID) return; const r = await sb.from("pessoas").update({ nome_equipe:null }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = null; } catch(e){} };
+API.arquivar = async (id, sim) => { try { const r = await sb.from("demandas").update({ arquivada_em: sim ? new Date().toISOString() : null }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
 
 /* ---------- utilidades ---------- */
 const nz = v => (v === "" || v === undefined || v === null) ? null : v;
@@ -32,7 +34,7 @@ function demPartial(p){ const row = {}; for (const [k, v] of Object.entries(p ||
 const demDe = r => ({ id:r.id, frente:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), prazo:sz(r.prazo), hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local), status:r.status,
   prioridade:r.prioridade, solicitante:sz(r.solicitante), secretaria:sz(r.secretaria), perfil:sz(r.perfil), equipe:r.equipe || [], responsavel:(r.equipe || []).join(", "), link:sz(r.link), obs:sz(r.obs),
   original:sz(r.original), checklist:r.checklist || [], anexos:r.anexos || [], historico:r.historico || [], criado:sz(r.criado), criadoEm:ms(r.criado_em), entregue:sz(r.entregue),
-  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "" });
+  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "", arquivadaEm:r.arquivada_em ? ms(r.arquivada_em) : 0 });
 const areaDe = r => r.removida ? null : ({ id:r.id, sigla:r.sigla, nome:r.nome, cor:r.cor, equipe:r.equipe || [], perfis:r.perfis || [], tipos:r.tipos || [], soAdmin:!!r.so_admin, hash:"T", criado:ms(r.criado_em) });
 const areaRow = d => ({ sigla:d.sigla, nome:d.nome, cor:d.cor, equipe:d.equipe || [], perfis:d.perfis || [], tipos:d.tipos || [], so_admin:!!d.soAdmin, removida:false });
 const recDe = r => ({ id:r.id, ativo:r.ativo, area:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), freq:r.freq, dias:r.dias || [], dia:r.dia, hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local),
@@ -325,7 +327,7 @@ async function seguir(){
     if (admin){ localStorage.setItem("cd-adm", "ADM"); localStorage.removeItem("cd-fr"); localStorage.removeItem("cd-frh"); }
     else { localStorage.removeItem("cd-adm"); const atual = localStorage.getItem("cd-fr"); const fr = visiveis.includes(atual) ? atual : visiveis[0]; localStorage.setItem("cd-fr", fr); localStorage.setItem("cd-frh", "T"); }
   } catch(e){}
-  try { if (p.data.nome_equipe){ const cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); if (!cur.nome){ cur.nome = p.data.nome_equipe; localStorage.setItem("cd-me", JSON.stringify(cur)); } } } catch(e){}
+  try { if (p.data.nome_equipe){ const cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); cur.nome = p.data.nome_equipe; localStorage.setItem("cd-me", JSON.stringify(cur)); } } catch(e){}
   document.body.classList.toggle("sem-voltar", admin || visiveis.length < 2); document.body.classList.toggle("e-admin", admin);
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
   window.DEMANDO_LOGOS = await carregarLogos();

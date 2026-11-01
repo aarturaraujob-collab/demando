@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     demandaId = null;
   } else if (b.tipo === "resumo") {
     const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);   // data em Maceió (UTC-3)
-    const { data: dem } = await sb.from("demandas").select("id, titulo, area_id, equipe, hora").eq("prazo", hoje).neq("status", "Entregue");
+    const { data: dem } = await sb.from("demandas").select("id, titulo, area_id, equipe, hora").eq("prazo", hoje).not("status", "in", "(Entregue,Postada)").is("arquivada_em", null);
     for (const p of pessoas ?? []) {
       const minhas = (dem ?? []).filter((d) => (d.equipe ?? []).map(norm).includes(nomeEq(p)) && vê(p, d.area_id));
       if (!minhas.length) continue;

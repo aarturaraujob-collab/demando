@@ -1,5 +1,5 @@
-"""Sair da conta, logo da BM e visualizador de anexos (PDF/foto) no iPhone e no Android simulados. App local em http://localhost:8766.
-Uso: SB=<token> ADMIN_SENHA=<senha> CODIGO_EQUIPE=<código> python3 tests/anexos_test.py [so-webkit]"""
+"""Sair da conta, logo da BM e visualizador de anexos (PDF/foto). App local em http://localhost:8766.
+Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/anexos_test.py [so-webkit]"""
 import asyncio, os, json, requests, sys
 from playwright.async_api import async_playwright
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
@@ -20,11 +20,11 @@ async def rodar(nome, eng, dev):
     try:
         await entra(pg,"admin",ADMIN)
         print("== SAIR")
-        await pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); await pg.wait_for_timeout(600)
+        await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a && a.scrollHeight>a.clientHeight) a.scrollTo(0,a.scrollHeight); else window.scrollTo(0,document.body.scrollHeight)})()"); await pg.wait_for_timeout(600)
         r=await pg.evaluate("(()=>{const s=document.querySelector('.sair-b'), t=document.querySelector('#tabbar'); if(!s) return null; const a=s.getBoundingClientRect(), c=t.getBoundingClientRect(); return {visivel:a.width>0, acimaDaBarra: a.bottom <= c.top+2, bottom:Math.round(a.bottom), barraTop:Math.round(c.top)}})()")
         chk("fim do Início: botão 'Sair da conta' aparece, acima da barra de baixo", r and r['visivel'] and r['acimaDaBarra'], r)
         await pg.screenshot(path=f"anx_{nome[:3]}_sair.png")
-        await pg.click("#tabbar [data-view=mais]"); await pg.wait_for_timeout(900); await pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); await pg.wait_for_timeout(400)
+        await pg.click("#tabbar [data-view=mais]"); await pg.wait_for_timeout(900); await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a && a.scrollHeight>a.clientHeight) a.scrollTo(0,a.scrollHeight); else window.scrollTo(0,document.body.scrollHeight)})()"); await pg.wait_for_timeout(400)
         chk("fim do Mais: botão 'Sair da conta'", await pg.locator("#view .sair-b").count()==1)
         await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(700)
         print("== LOGO DA BM")
@@ -62,17 +62,17 @@ async def rodar(nome, eng, dev):
         await pg.click(".axv-x"); await pg.wait_for_timeout(500)
         print("== SAIR FUNCIONA")
         await pg.evaluate("document.querySelector('#det').open && document.querySelector('#det').close && document.querySelector('#det').close()")
-        await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(600); await pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); await pg.click(".sair-b"); await pg.wait_for_selector("#g-usuario", timeout=15000)
+        await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(600); await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a && a.scrollHeight>a.clientHeight) a.scrollTo(0,a.scrollHeight); else window.scrollTo(0,document.body.scrollHeight)})()"); await pg.click(".sair-b"); await pg.wait_for_selector("#g-usuario", timeout=15000)
         chk("tocar em 'Sair da conta' volta pra tela de login", await pg.locator("#g-usuario").is_visible())
         await pg.reload(); await pg.wait_for_selector("#g-usuario", timeout=15000); chk("e continua deslogado depois de reabrir", await pg.locator("#g-usuario").is_visible())
         if nome.startswith("WebKit"):
             print("== FUNCIONÁRIO (BM)")
             requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Func Teste","usuario":"tst.fn","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.fn'")[0]['id']
             sql(f"update public.pessoas set papel='membro' where id='{uid}'"); sql(f"insert into public.acessos values ('{uid}','asc')")
-            await entra(pg,"tst.fn","SenhaForte123"); await pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); await pg.wait_for_timeout(500)
+            await entra(pg,"tst.fn","SenhaForte123"); await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a && a.scrollHeight>a.clientHeight) a.scrollTo(0,a.scrollHeight); else window.scrollTo(0,document.body.scrollHeight)})()"); await pg.wait_for_timeout(500)
             chk("funcionário também tem 'Sair da conta' no fim do Início", await pg.locator(".sair-b").count()==1)
             chk("funcionário vê a logo da BM no topo", await pg.evaluate("(()=>{const i=document.querySelector('#areaBanner img.abn-logo'); return !!i && i.complete && i.naturalWidth>0})()"))
-            await pg.evaluate("window.scrollTo(0,0)"); await pg.screenshot(path="anx_func.png")
+            await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a) a.scrollTo(0,0); window.scrollTo(0,0)})()"); await pg.screenshot(path="anx_func.png")
     except Exception as e: chk("execução sem travar", False, repr(e)[:200])
     finally:
         if uid: requests.delete(f"{BASE}/auth/v1/admin/users/{uid}", headers=SV)

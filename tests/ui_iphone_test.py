@@ -1,5 +1,5 @@
-"""Cabeçalho, ordem dos dados no card e "Quem é você?" no iPhone simulado (WebKit). App local em http://localhost:8766.
-Uso: SB=<token> ADMIN_SENHA=<senha> CODIGO_EQUIPE=<código> python3 tests/ui_iphone_test.py"""
+"""Cabeçalho, ordem dos dados no card e \"Quem é você?\" no iPhone simulado. App local em http://localhost:8766.
+Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/ui_iphone_test.py"""
 import asyncio, os, json, time, requests
 from playwright.async_api import async_playwright
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
@@ -35,7 +35,7 @@ async def main():
         if r:
             chk("o '0/4' fica NA MESMA LINHA do 'A fazer', logo ao lado", abs(r['yStatus']-r['yProg'])<=3 and r['xProg']>r['xStatus'], f"status y={r['yStatus']} x={r['xStatus']} | progresso y={r['yProg']} x={r['xProg']}")
             chk("ordem de cima pra baixo: status/0-4 → local → equipe", r['yStatus'] < r['yWhen'] < r['yEquipe'], f"status {r['yStatus']} < local {r['yWhen']} < equipe {r['yEquipe']}")
-        await A.evaluate("window.scrollTo(0,0)"); await A.screenshot(path="ui2_card.png")
+        await A.evaluate("(()=>{const a=document.querySelector('.app'); if(a) a.scrollTo(0,0); window.scrollTo(0,0)})()"); await A.screenshot(path="ui2_card.png")
         print("== 'QUEM É VOCÊ?' → NOTIFICAÇÃO")
         requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Fulano Qualquer","usuario":"tst.q","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.q'")[0]['id']
         sql(f"update public.pessoas set papel='membro' where id='{uid}'"); sql(f"insert into public.acessos values ('{uid}','asc')")

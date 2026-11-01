@@ -1,5 +1,5 @@
-"""Logos da FAF e da BM (banner centralizado, etiquetas, escudo sem contorno), nos temas claro e escuro. App local em http://localhost:8766.
-Uso: SB=<token> ADMIN_SENHA=<senha> CODIGO_EQUIPE=<código> python3 tests/logos_test.py"""
+"""Logos da FAF e da BM nos dois temas. App local em http://localhost:8766.
+Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/logos_test.py"""
 import asyncio, os, json, requests
 from playwright.async_api import async_playwright
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
@@ -26,7 +26,7 @@ async def main():
         chk("aba FAF: escudo CENTRALIZADO no quadro", abs(g['dx'])<=2, g)
         chk("aba FAF: nenhum nome escrito ao lado (só o escudo)", g['textoVisivel']==0 and g['srEscondido'], g)
         t=await pg.evaluate("(()=>{const tg=document.createElement('span'); tg.className='tag fed'; tg.setAttribute('data-logo','faf'); document.querySelector('#view').append(tg); const ok=getComputedStyle(tg).backgroundImage.includes('faf-emblem.png'); tg.remove(); const reais=[...document.querySelectorAll('#view .tag.fed')]; return {ok, reaisMarcadas: reais.every(x=>x.getAttribute('data-logo')==='faf'), n:reais.length}})()"); chk("etiqueta 'FAF' dos cards leva o escudo (e as etiquetas reais vêm marcadas)", t['ok'] and t['reaisMarcadas'], t)
-        await pg.evaluate("window.scrollTo(0,0)"); await pg.screenshot(path=f"faf_{tema}_fed.png")
+        await pg.evaluate("(()=>{const a=document.querySelector('.app'); if(a) a.scrollTo(0,0); window.scrollTo(0,0)})()"); await pg.screenshot(path=f"faf_{tema}_fed.png")
         await pg.click("#mFr button[data-fr=asc]"); await pg.wait_for_timeout(1000); r=await pg.evaluate(BANNER)
         chk("aba BM continua com a logo da Prefeitura", r and 'logo-bm' in r['classe'] and r['img'], r['classe'] if r else None)
         await pg.screenshot(path=f"faf_{tema}_bm.png")

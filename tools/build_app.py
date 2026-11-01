@@ -115,7 +115,7 @@ rep(r"""  const ALL_VIEWS = VIEWS.concat(ADMIN_VIEWS);""", r"""  const ALL_VIEWS
 rep(r"""    if (role === "staff" && view === "mais") view = "today";""", r"""    if (role === "staff" && view === "mais") view = "today";
     if (role !== "staff" && view === "minhas") view = "today";""")
 rep(r"""minhas:renderMinhas, escala:renderEscala""", r"""minhas:renderMinhasPage, escala:renderEscala""")
-rep(r"""  function renderMinhas(v){""", r"""  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); if (!meNome){ v.append(chooser()); return; } renderMinhas(v); }
+rep(r"""  function renderMinhas(v){""", r"""  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); const who = (pessoa && TODOS.includes(pessoa)) ? pessoa : meNome; if (!who){ v.append(chooser()); return; } renderMinhas(v, who); }
   function renderMinhas(v){""")
 rep(r"""onclick:() => { meNome = ""; saveMe(); notified = null; render(); }}, "Ver todas as demandas")""", r"""onclick:() => setView("today")}, "Ver as demandas de toda a equipe")""")
 rep(r'''minhas:"Minhas demandas"''', r'''minhas:"Minhas escalas"''')
@@ -137,6 +137,86 @@ rep(r"""const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) &&
 rep(r"""el("span",{class:"tag "+it.frente}, LBL[it.frente])""", r"""el("span",{class:"tag "+it.frente, "data-logo":({fed:"faf", asc:"bm"})[it.frente] || false}, LBL[it.frente])""")
 rep(r"""el("span",{class:"tag " + r.area}, LBL[r.area])""", r"""el("span",{class:"tag " + r.area, "data-logo":({fed:"faf", asc:"bm"})[r.area] || false}, LBL[r.area])""")
 rep(r"""mf.append(el("button",{"data-fr":k, onclick:()=>setShow(k)}, l));""", r"""mf.append(el("button",{"data-fr":k, "data-logo":({fed:"faf", asc:"bm"})[k] || false, onclick:()=>setShow(k)}, l));""")
+
+
+# 15) identidade permanente ("Quem é você?" só uma vez), Minhas com a pessoa escolhida, arquivo, etapas com o fluxo no card
+rep(r"""      if (pd && TODOS.includes(pd.nome)){ meNome = pd.nome; vistos = new Set(Array.isArray(pd.vistos) ? pd.vistos : []); render(); }
+      else if (meNome) saveMe();""", r"""      if (pd && Array.isArray(pd.vistos) && pd.vistos.length){ pd.vistos.forEach(x => vistos.add(x)); render(); }
+      if (meNome) saveMe();""")
+rep(r"""  function saveMe(){
+""", r"""  function saveMe(){
+    if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome);
+""")
+cut("  function hello(open){", "  function nomesDoUsuario(){", r"""  function hello(open, who){
+    who = who || meNome; const eu = who === meNome;
+    const n = eu ? unseenList().length : 0, stats = [];
+    if (eu) stats.push(el("div",{class:"hs" + (n ? " hot" : "")}, el("b",null,n), el("span",null,"Novas escalas")));
+    stats.push(el("div",{class:"hs"}, el("b",null, open.filter(i => i.prazo === todayStr()).length), el("span",null,"Para hoje")), el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas")));
+    const acoes = eu ? [
+      ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
+      el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe"),
+      el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; if (window.DEMANDO_API) window.DEMANDO_API.limparNomeEquipe(); render(); }}, "Não sou eu")
+    ] : [el("button",{type:"button", class:"lnk-b", onclick:() => { pessoa = ""; fillPessoa(); savePrefs(); render(); }}, "Voltar às minhas escalas")];
+    return el("section",{class:"hello"},
+      el("div",{class:"hello-t"}, el("span",{class:"hello-av av " + avColor(who)}, ini(who)),
+        el("div",null, el("b",null, eu ? "Olá, " + who : "Escalas de " + who), el("span",null, open.length ? plural(open.length, eu ? "demanda em aberto com você" : "demanda em aberto", eu ? "demandas em aberto com você" : "demandas em aberto") : (eu ? "Nada em aberto com você agora" : "Nada em aberto agora")))),
+      el("div",{class:"hello-s"}, ...stats),
+      el("div",{class:"hello-a"}, ...acoes));
+  }
+""")
+rep(r"""  function renderMinhas(v){""", r"""  function renderMinhas(v, who){ who = who || meNome; const eu = who === meNome;""")
+rep(r"""    const mine = mineOf(meNome).filter(match).sort(order), open = mine.filter(isOpen);
+    v.append(hello(open));
+    const novas = open.filter(naoVisto), rest = open.filter(i => !naoVisto(i));""", r"""    const mine = mineOf(who).filter(match).sort(order), open = mine.filter(isOpen);
+    v.append(hello(open, who));
+    const novas = eu ? open.filter(naoVisto) : [], rest = eu ? open.filter(i => !naoVisto(i)) : open;""")
+# arquivo: botão na ficha, e as arquivadas saem das listas do dia a dia (continuam no Mês e nos relatórios)
+rep(r"""    $("#detDel").hidden = !adm;""", r"""    $("#detDel").hidden = !adm;
+    const _arq = !!(window.DEMANDO_API && window.DEMANDO_API.arquivar); $("#detArq").hidden = !(adm && _arq && (it.arquivadaEm || !isOpen(it))); $("#detArq").textContent = it.arquivadaEm ? "Desarquivar" : "Arquivar";""")
+rep(r"""  $("#detDel").addEventListener("click", () => {""", r"""  $("#detArq").addEventListener("click", async () => {
+    const it = detItem; if (!it || !window.DEMANDO_API) return;
+    const voltar = !!it.arquivadaEm;
+    det.close();
+    if (await window.DEMANDO_API.arquivar(it.id, !voltar)) toast(voltar ? "Demanda desarquivada" : "Demanda arquivada", () => window.DEMANDO_API.arquivar(it.id, voltar));
+    else toast(voltar ? "Não deu pra desarquivar agora." : "Não deu pra arquivar agora.");
+  });
+  $("#detDel").addEventListener("click", () => {""")
+rep(r"""        let list = mine.filter(i => i.status === s).sort(order);
+        if (s === "Entregue") list = list.sort((a,b) => (b.entregue||"").localeCompare(a.entregue||"")).slice(0,40);""", r"""        let list = mine.filter(i => i.status === s && !i.arquivadaEm).sort(order);
+        if (s === "Entregue" || s === "Postada") list = list.sort((a,b) => (b.entregue||"").localeCompare(a.entregue||"")).slice(0,40);""")
+rep(r"""el("span",{class:"n"}, mine.filter(i=>i.status===s).length)""", r"""el("span",{class:"n"}, mine.filter(i=>i.status===s && !i.arquivadaEm).length)""")
+rep(r"""const feitas = mine.filter(i => !isOpen(i) && (i.entregue || "") >= addDays(t,-7));""", r"""const feitas = mine.filter(i => !isOpen(i) && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7));""")
+# etapas: A fazer, Em produção, Ajustes, Entregue, Postada
+rep(r"""  const STATUS = ["A fazer","Em produção","Entregue"];""", r"""  const STATUS = ["A fazer","Em produção","Ajustes","Entregue","Postada"];""")
+rep(r"""  const isOpen = it => it.status !== "Entregue";""", r"""  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada";""")
+rep(r"""mine.filter(i => i.status === "Entregue" && (i.entregue||"") >= weekAgo).length""", r"""mine.filter(i => !isOpen(i) && (i.entregue||"") >= weekAgo).length""")
+rep(r"""const stKey = st => ({"A fazer":"s0","Em produção":"s1","Entregue":"s3"})[st] || "s0";""", r"""const stKey = st => ({"A fazer":"s0","Em produção":"s1","Ajustes":"s2","Entregue":"s3","Postada":"s4"})[st] || "s0";""")
+rep(r"""it.status === "Entregue" ? icon("check") : el("i",{class:"ring"}), it.status)""", r"""!isOpen(it) ? icon("check") : el("i",{class:"ring"}), it.status)""")
+rep(r"""    const si = STATUS.indexOf(it.status), next = STATUS[si+1];
+    const hasSt = !!(canWrite && isOpen(it) && next && next !== "Entregue");""", r"""    const next = it.status === "A fazer" ? "Em produção" : null;
+    const hasSt = !!(canWrite && next);""")
+rep(r"""if (s === "Entregue") n.entregue = it.status === "Entregue" && it.entregue ? it.entregue : todayStr(); else delete n.entregue;""", r"""if (s === "Entregue" || s === "Postada") n.entregue = it.entregue || todayStr(); else delete n.entregue;""")
+rep(r"""n.historico = hist(it, s === "Entregue" ? "Marcada como entregue" : "Movida para " + s);
+    if (await write(n)) toast(s === "Entregue" ? "Entregue! Boa." : "Movida para " + s, () => write(prev));""", r"""n.historico = hist(it, s === "Entregue" ? "Marcada como entregue" : s === "Postada" ? "Marcada como postada" : "Movida para " + s);
+    if (await write(n)) toast(s === "Entregue" ? "Entregue! Boa." : s === "Postada" ? "Postada! Missão cumprida." : "Movida para " + s, () => write(prev));""")
+rep(r"""...(r.status === "Entregue" ? {entregue: t} : {})""", r"""...(r.status === "Entregue" || r.status === "Postada" ? {entregue: t} : {})""")
+rep(r"""if (off) sp("✓ ENTREGUE", "#E3E7E4", SH.muted);""", r"""if (off) sp(it.status === "Postada" ? "✓ POSTADA" : "✓ ENTREGUE", "#E3E7E4", SH.muted);""")
+rep(r"""el("i",{class:"stp-d"}), s))));""", r"""el("i",{class:"stp-d"}), s === "Em produção" ? "Produção" : s))));""")
+# o fluxo da demanda aparece direto no card (a etapa atual destacada)
+rep(r"""  function row(it, opts){""", r"""  const fluxoEl = it => { const cur = STATUS.indexOf(it.status); return el("span",{class:"flow", role:"img", "aria-label":"Etapa: " + it.status + " (" + (cur + 1) + " de " + STATUS.length + ")"}, ...STATUS.map((s, i) => el("span",{class:"fs " + stKey(s) + (i < cur ? " past" : i === cur ? " cur" : "")}, el("i"), el("b", null, s === "Em produção" ? "Produção" : s)))); };
+  function row(it, opts){""")
+rep(r"""el("span",{class:"tt"}, it.titulo),""", r"""el("span",{class:"tt"}, it.titulo),
+        fluxoEl(it),""")
+# Secretaria de Esporte
+rep(r"""["Gabinete Civil","Mariana Feijó"]
+  ];""", r"""["Gabinete Civil","Mariana Feijó"],["Esporte","Secretário de Esporte"]
+  ];""")
+# logos da FAF e da BM no resumo do Início
+rep(r"""el("div",{class:"ph"}, el("b",null,LBL[f]), el("span",null,SUB[f]))""", r"""el("div",{class:"ph"}, el("b",{"data-logo":({fed:"faf", asc:"bm"})[f] || false}, LBL[f]), el("span",null,SUB[f]))""")
+# rodapé fixo: no celular só o miolo rola; quem sobe ao topo agora é o .app
+rep(r"""window.scrollTo({top:0})""", r"""scrollTopApp()""", 3)
+rep(r"""  function setView(v){""", r"""  function scrollTopApp(){ const a = document.querySelector(".app"); if (a && a.scrollTo) a.scrollTo({top:0}); window.scrollTo({top:0}); }
+  function setView(v){""")
 
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
@@ -179,6 +259,32 @@ css_extra += """
 .mm-seg button[aria-pressed="true"]::after,.mm-seg button[aria-pressed="true"] + button::after{opacity:0}
 """
 css_extra += """
+:root{--s4:#0891B2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s4:#38BDF8}}
+:root[data-theme="dark"]{--s4:#38BDF8}
+.sc.s4{--sc:var(--s4)} .col.s4{--c:var(--s4)} .stp.s4{--sc:var(--s4)}
+.stepper{grid-template-columns:repeat(5,minmax(0,1fr))}
+.stp{font-size:11px;padding:10px 0 9px}
+.cols{grid-auto-columns:minmax(232px,1fr)}
+.flow{display:flex;width:100%;margin-top:9px}
+.flow .fs{--c:var(--s0);flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;font-size:10px;font-weight:600;color:var(--faint);line-height:1}
+.flow .fs.s1{--c:var(--s1)} .flow .fs.s2{--c:var(--s2)} .flow .fs.s3{--c:var(--s3)} .flow .fs.s4{--c:var(--s4)}
+.flow .fs i{width:9px;height:9px;border-radius:50%;background:color-mix(in srgb,var(--ink) 18%,transparent);position:relative;z-index:1}
+.flow .fs::before{content:"";position:absolute;top:4px;left:-50%;right:50%;height:2px;background:color-mix(in srgb,var(--ink) 13%,transparent)}
+.flow .fs:first-child::before{display:none}
+.flow .fs.past i,.flow .fs.cur i{background:var(--c)}
+.flow .fs.past::before,.flow .fs.cur::before{background:var(--c)}
+.flow .fs.cur i{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 26%,transparent)}
+.flow .fs.cur b{color:var(--c);font-weight:800}
+.flow .fs.past b{color:var(--muted)}
+.pane .ph b[data-logo="faf"]::before{content:"";display:inline-block;width:27px;height:21px;margin-right:9px;vertical-align:-4px;background:url(assets/faf-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="bm"]::before{content:"";display:inline-block;width:19px;height:24px;margin-right:9px;vertical-align:-5px;background:url(assets/bm-emblem.png) center/contain no-repeat}
+@media (max-width:860px){
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+.app{height:100%;height:100dvh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+}
+"""
+css_extra += """
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
@@ -197,6 +303,9 @@ css_extra += """
 """
 h2 = h.replace(m.group(0), '<script type="text/plain" id="appcode">\n' + app + '</script>\n</body>')
 h2 = h2.replace("</style>", css_extra + "</style>", 1)
+_dup = '      <span class="sp"></span>\n      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>'
+assert h2.count(_dup) == 1, "botão Duplicar não encontrado no HTML"
+h2 = h2.replace(_dup, '      <span class="sp"></span>\n      <button type="button" class="btn" id="detArq" hidden>Arquivar</button>\n      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>')
 libs = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>\n<script src="config.js"></script>\n<script src="adapter.js"></script>\n'
 h2 = h2.replace('<script type="text/plain" id="appcode">', libs + '<script type="text/plain" id="appcode">', 1)
 pwa_head = '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon-192.png">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Demandô">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n'

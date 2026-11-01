@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives import serialization
 SB=os.environ['SB']; REF='uaakiytxphmtwsthooih'; BASE=f"https://{REF}.supabase.co"; M={"Authorization":"Bearer "+SB,"User-Agent":"demando-test"}
 sql=lambda s: requests.post(f"https://api.supabase.com/v1/projects/{REF}/database/query", headers=M, json={"query":s}).json()
 keys=requests.get(f"https://api.supabase.com/v1/projects/{REF}/api-keys?reveal=true", headers=M).json(); SERVICE=[k['api_key'] for k in keys if k['name']=='service_role'][0]
-SV={"apikey":SERVICE,"Authorization":"Bearer "+SERVICE}; V={'push_secret': os.environ['PUSH_SECRET']}; CODIGO=os.environ['CODIGO_EQUIPE']
+SV={"apikey":SERVICE,"Authorization":"Bearer "+SERVICE}; V={"push_secret": os.environ.get("PUSH_SECRET","")}; CODIGO=os.environ["CODIGO_EQUIPE"]
 b64u=lambda b: base64.urlsafe_b64encode(b).rstrip(b'=').decode(); FN=f"{BASE}/functions/v1/enviar-push"
 res=[]
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:130] if d else ""))
@@ -69,7 +69,7 @@ try:
     sql(f"update public.pessoas set ativo=false where id='{uid}'"); rr=requests.post(FN+"?simulado=1", headers={"x-push-secret":V['push_secret']}, json={"tipo":"resumo"}).json()
     chk("pessoa desativada NÃO recebe", rr.get('destinatarios')==0, rr)
     print("== AGENDA")
-    chk("tarefas diárias agendadas (05h e 08h de Maceió)", [x['jobname'] for x in sql("select jobname from cron.job order by 1")]==['demando-recorrentes','demando-resumo'])
+    chk("tarefas diárias agendadas (arquivar 5h30, recorrentes 5h e resumo 8h de Maceió)", [x['jobname'] for x in sql("select jobname from cron.job order by 1")]==['demando-arquivar','demando-recorrentes','demando-resumo'])
 finally:
     sql("update public.config_interna set valor = replace(valor, '?simulado=1', '') where chave='push_url'")
     sql("delete from public.comentarios where id like 'pc%'"); sql("delete from public.demandas where titulo like 'PUSH-%'"); sql("delete from public.push_log")

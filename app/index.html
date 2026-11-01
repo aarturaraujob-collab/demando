@@ -1066,6 +1066,31 @@ body.pm-open .tabbar{z-index:60}
 .mm-seg button + button::after{content:"";position:absolute;left:-3px;top:24%;bottom:24%;width:1.5px;border-radius:2px;background:color-mix(in srgb,var(--ink) 24%,transparent);transition:opacity .2s}
 .mm-seg button[aria-pressed="true"]::after,.mm-seg button[aria-pressed="true"] + button::after{opacity:0}
 
+:root{--s4:#0891B2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s4:#38BDF8}}
+:root[data-theme="dark"]{--s4:#38BDF8}
+.sc.s4{--sc:var(--s4)} .col.s4{--c:var(--s4)} .stp.s4{--sc:var(--s4)}
+.stepper{grid-template-columns:repeat(5,minmax(0,1fr))}
+.stp{font-size:11px;padding:10px 0 9px}
+.cols{grid-auto-columns:minmax(232px,1fr)}
+.flow{display:flex;width:100%;margin-top:9px}
+.flow .fs{--c:var(--s0);flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;font-size:10px;font-weight:600;color:var(--faint);line-height:1}
+.flow .fs.s1{--c:var(--s1)} .flow .fs.s2{--c:var(--s2)} .flow .fs.s3{--c:var(--s3)} .flow .fs.s4{--c:var(--s4)}
+.flow .fs i{width:9px;height:9px;border-radius:50%;background:color-mix(in srgb,var(--ink) 18%,transparent);position:relative;z-index:1}
+.flow .fs::before{content:"";position:absolute;top:4px;left:-50%;right:50%;height:2px;background:color-mix(in srgb,var(--ink) 13%,transparent)}
+.flow .fs:first-child::before{display:none}
+.flow .fs.past i,.flow .fs.cur i{background:var(--c)}
+.flow .fs.past::before,.flow .fs.cur::before{background:var(--c)}
+.flow .fs.cur i{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 26%,transparent)}
+.flow .fs.cur b{color:var(--c);font-weight:800}
+.flow .fs.past b{color:var(--muted)}
+.pane .ph b[data-logo="faf"]::before{content:"";display:inline-block;width:27px;height:21px;margin-right:9px;vertical-align:-4px;background:url(assets/faf-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="bm"]::before{content:"";display:inline-block;width:19px;height:24px;margin-right:9px;vertical-align:-5px;background:url(assets/bm-emblem.png) center/contain no-repeat}
+@media (max-width:860px){
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+.app{height:100%;height:100dvh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+}
+
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
@@ -1220,6 +1245,7 @@ body.pm-open .tabbar{z-index:60}
     <div class="sh-f">
       <button type="button" class="del" id="detDel" hidden>Excluir</button>
       <span class="sp"></span>
+      <button type="button" class="btn" id="detArq" hidden>Arquivar</button>
       <button type="button" class="btn" id="detDup" hidden>Duplicar</button>
       <button type="button" class="btn" id="detClose">Fechar</button>
       <button type="button" class="btn pri" id="detEdit">Editar</button>
@@ -1299,7 +1325,7 @@ body.pm-open .tabbar{z-index:60}
 <script type="text/plain" id="appcode">
 (function(){
   /* ---------- Base ---------- */
-  const STATUS = ["A fazer","Em produção","Entregue"];
+  const STATUS = ["A fazer","Em produção","Ajustes","Entregue","Postada"];
   const normSt = d => { if (d && d.status === "Aprovação") d.status = "Em produção"; return d; };
   const PRIS = ["Baixa","Média","Alta"];
   const TIPOS = {
@@ -1311,7 +1337,7 @@ body.pm-open .tabbar{z-index:60}
   const SECRETARIAS = [
     ["Previdência (PREV)","Marx"],["Cultura","Júnior"],["Transporte","Marcelo"],["Infraestrutura","Ricardo"],
     ["Saúde","Deca"],["Educação","Maria Izaura"],["Assistência Social","Adriano"],["SAAE","Vaninho"],
-    ["Finanças","Aliny"],["Obras","Amando"],["Gestão e Patrimônio","Luana"],["Agricultura","Luiz Lula"],["Gabinete Civil","Mariana Feijó"]
+    ["Finanças","Aliny"],["Obras","Amando"],["Gestão e Patrimônio","Luana"],["Agricultura","Luiz Lula"],["Gabinete Civil","Mariana Feijó"],["Esporte","Secretário de Esporte"]
   ];
   const SEC_NOMES = SECRETARIAS.map(x => x[0]);
   const EQUIPES = {fed:["Juninho","Arthur","Malu","Cadu","Ester"], asc:["Juninho","Leopoldo","Celso","Sara","Arthur","Mauro"]};
@@ -1514,7 +1540,7 @@ body.pm-open .tabbar{z-index:60}
       el("span",{class:"avn"}, pessoasTxt(it)));
   }
   const inFr = it => show === "all" || it.frente === show;
-  const isOpen = it => it.status !== "Entregue";
+  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada";
   const isLate = it => isOpen(it) && it.prazo && it.prazo < todayStr();
   const PO = {Alta:0,"Média":1,Baixa:2};
   const order = (a,b) => { const A = a.prazo||"9999", B = b.prazo||"9999"; if (A !== B) return A < B ? -1 : 1; const ha = a.hora||"99", hb = b.hora||"99"; if (ha !== hb) return ha < hb ? -1 : 1; return (PO[a.prioridade]??1)-(PO[b.prioridade]??1); };
@@ -1575,9 +1601,10 @@ body.pm-open .tabbar{z-index:60}
     if (tabFirst){ void tb.offsetWidth; requestAnimationFrame(() => tb.classList.remove("noanim")); tabFirst = false; }
   }
   window.addEventListener("resize", () => { const tb = $("#tabbar"); if (!tb) return; tb.classList.add("noanim"); placeTab(); requestAnimationFrame(() => tb.classList.remove("noanim")); });
+  function scrollTopApp(){ const a = document.querySelector(".app"); if (a && a.scrollTo) a.scrollTo({top:0}); window.scrollTo({top:0}); }
   function setView(v){
     const ord = ALL_VIEWS.map(x => x[0]), same = v === view, dir = ord.indexOf(v) >= ord.indexOf(view) ? 1 : -1;
-    view = v; calSel = null; savePrefs(); render(); window.scrollTo({top:0});
+    view = v; calSel = null; savePrefs(); render(); scrollTopApp();
     if (!same) animateIn(dir);
   }
   function setShow(f){ show = f; fillPessoa(); savePrefs(); render(); animateIn(0); }
@@ -1621,10 +1648,10 @@ body.pm-open .tabbar{z-index:60}
         ["", open.length, "Em aberto"],
         ["today", open.filter(i => i.prazo === t).length, "Vencem hoje"],
         ["late", open.filter(isLate).length, "Atrasadas"],
-        ["", mine.filter(i => i.status === "Entregue" && (i.entregue||"") >= weekAgo).length, "Entregues em 7 dias"]
+        ["", mine.filter(i => !isOpen(i) && (i.entregue||"") >= weekAgo).length, "Entregues em 7 dias"]
       ];
       box.append(el("button",{class:"pane "+f, title: show === f ? "Mostrar as duas frentes" : "Mostrar só "+LBL[f], onclick:()=>setShow(show === f ? "all" : f)},
-        show === "all" ? el("div",{class:"ph"}, el("b",null,LBL[f]), el("span",null,SUB[f])) : null,
+        show === "all" ? el("div",{class:"ph"}, el("b",{"data-logo":({fed:"faf", asc:"bm"})[f] || false}, LBL[f]), el("span",null,SUB[f])) : null,
         el("div",{class:"kpis"}, ...vals.map(([c,n,l]) => el("div",{class:"kpi "+(n ? c : "zero")}, el("b",null,n), el("span",null,l)))),
         (() => { const dw = (toDate(t).getDay()+6)%7, mon = addDays(t,-dw), sun = addDays(mon,6);
           const wk = mine.filter(i => i.prazo && i.prazo >= mon && i.prazo <= sun), dn = wk.filter(i => !isOpen(i)).length;
@@ -1635,18 +1662,20 @@ body.pm-open .tabbar{z-index:60}
   /* ---------- Linha de demanda ---------- */
   const TIPO_IC = [["video","t_video"],["arte","t_arte"],["stories","t_stories"],["post","t_post"],["release","t_release"],["campanha","t_camp"],["patroc","t_pat"],["cobertura","t_cob"]];
   const tipoIcon = t => { const x = norm(t || ""); const f = TIPO_IC.find(([k]) => x.includes(k)); return f ? f[1] : "t_out"; };
-  const stKey = st => ({"A fazer":"s0","Em produção":"s1","Entregue":"s3"})[st] || "s0";
-  const statusChip = it => el("span",{class:"sc " + stKey(it.status)}, it.status === "Entregue" ? icon("check") : el("i",{class:"ring"}), it.status);
+  const stKey = st => ({"A fazer":"s0","Em produção":"s1","Ajustes":"s2","Entregue":"s3","Postada":"s4"})[st] || "s0";
+  const statusChip = it => el("span",{class:"sc " + stKey(it.status)}, !isOpen(it) ? icon("check") : el("i",{class:"ring"}), it.status);
   const urgCls = it => isLate(it) ? " late" : (isOpen(it) && it.prazo === todayStr() ? " today" : "");
   const linha = (...xs) => { const k = xs.filter(Boolean); return k.length ? el("span",{class:"meta"}, ...k) : null; };
+  const fluxoEl = it => { const cur = STATUS.indexOf(it.status); return el("span",{class:"flow", role:"img", "aria-label":"Etapa: " + it.status + " (" + (cur + 1) + " de " + STATUS.length + ")"}, ...STATUS.map((s, i) => el("span",{class:"fs " + stKey(s) + (i < cur ? " past" : i === cur ? " cur" : "")}, el("i"), el("b", null, s === "Em produção" ? "Produção" : s)))); };
   function row(it, opts){
     opts = opts || {};
-    const si = STATUS.indexOf(it.status), next = STATUS[si+1];
-    const hasSt = !!(canWrite && isOpen(it) && next && next !== "Entregue");
+    const next = it.status === "A fazer" ? "Em produção" : null;
+    const hasSt = !!(canWrite && next);
     return el("div",{class:"rw dm" + urgCls(it) + (isOpen(it) ? "" : " done") + (hasSt ? " has-st" : ""), style:"--a:" + areaVar(it)},
       el("span",{class:"tile"}, icon(tipoIcon(it.tipo))),
       el("button",{class:"body", onclick:()=>openDetail(it)},
         el("span",{class:"tt"}, it.titulo),
+        fluxoEl(it),
         linha(el("span",{class:"tag "+it.frente, "data-logo":({fed:"faf", asc:"bm"})[it.frente] || false}, LBL[it.frente]), el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
         linha(statusChip(it), progEl(it), cmcEl(it), isNew(it) ? el("span",{class:"novo"},"NOVO") : null),
         linha(opts.noDue ? null : dueEl(it), quandoEl(it)),
@@ -1722,10 +1751,10 @@ body.pm-open .tabbar{z-index:60}
           el("span",{class:"chev"}, icon("right")), el("h2",null,LBL[f]), el("span",null, plural(mine.filter(isOpen).length,"em aberto","em aberto") + (closed ? " · toque pra abrir" : ""))));
       const cols = el("div",{class:"cols"});
       for (const s of STATUS){
-        let list = mine.filter(i => i.status === s).sort(order);
-        if (s === "Entregue") list = list.sort((a,b) => (b.entregue||"").localeCompare(a.entregue||"")).slice(0,40);
+        let list = mine.filter(i => i.status === s && !i.arquivadaEm).sort(order);
+        if (s === "Entregue" || s === "Postada") list = list.sort((a,b) => (b.entregue||"").localeCompare(a.entregue||"")).slice(0,40);
         const body = el("div",{class:"col-b"});
-        const c = el("div",{class:"col " + stKey(s)}, el("div",{class:"col-h"}, el("span",{class:"col-t"}, el("i",{class:"sdot"}), s), el("span",{class:"n"}, mine.filter(i=>i.status===s).length)), body);
+        const c = el("div",{class:"col " + stKey(s)}, el("div",{class:"col-h"}, el("span",{class:"col-t"}, el("i",{class:"sdot"}), s), el("span",{class:"n"}, mine.filter(i=>i.status===s && !i.arquivadaEm).length)), body);
         if (!list.length) body.append(el("div",{class:"empty"}, s === "A fazer" ? "Nada novo por aqui." : "Vazio"));
         list.forEach(it => body.append(card(it)));
         c.addEventListener("dragover", e => { const it = items.find(x => x.id === dragId); if (it && it.frente === f){ e.preventDefault(); c.classList.add("over"); } });
@@ -1884,7 +1913,7 @@ body.pm-open .tabbar{z-index:60}
   }
   function withStatus(it, s){
     const n = Object.assign({}, it, {status:s});
-    if (s === "Entregue") n.entregue = it.status === "Entregue" && it.entregue ? it.entregue : todayStr(); else delete n.entregue;
+    if (s === "Entregue" || s === "Postada") n.entregue = it.entregue || todayStr(); else delete n.entregue;
     return n;
   }
   let userApi = null, myId = null; const nameCache = {};
@@ -1892,8 +1921,8 @@ body.pm-open .tabbar{z-index:60}
   async function setStatus(it, s){
     if (!s || s === it.status) return;
     const prev = Object.assign({}, it);
-    const n = withStatus(it, s); n.historico = hist(it, s === "Entregue" ? "Marcada como entregue" : "Movida para " + s);
-    if (await write(n)) toast(s === "Entregue" ? "Entregue! Boa." : "Movida para " + s, () => write(prev));
+    const n = withStatus(it, s); n.historico = hist(it, s === "Entregue" ? "Marcada como entregue" : s === "Postada" ? "Marcada como postada" : "Movida para " + s);
+    if (await write(n)) toast(s === "Entregue" ? "Entregue! Boa." : s === "Postada" ? "Postada! Missão cumprida." : "Movida para " + s, () => write(prev));
   }
 
   /* ---------- Formulário ---------- */
@@ -1961,7 +1990,7 @@ body.pm-open .tabbar{z-index:60}
           isLate(it) ? el("span",{class:"chipx hi"},"Atrasada") : null, it.recorrente ? el("span",{class:"chipx"},"Recorrente") : null),
         el("h3",{class:"dt-t"}, it.titulo))));
     if (canWrite) b.append(el("div",{class:"stepper", role:"group", "aria-label":"Etapa"}, ...STATUS.map(s =>
-      el("button",{type:"button", class:"stp " + stKey(s), "aria-pressed":String(s === it.status), onclick:() => { if (s !== it.status) setStatus(it, s).then(renderDetailIfOpen); }}, el("i",{class:"stp-d"}), s))));
+      el("button",{type:"button", class:"stp " + stKey(s), "aria-pressed":String(s === it.status), onclick:() => { if (s !== it.status) setStatus(it, s).then(renderDetailIfOpen); }}, el("i",{class:"stp-d"}), s === "Em produção" ? "Produção" : s))));
     const info = [["month","Prazo", it.prazo ? fmtLong(it.prazo) : "Sem prazo"]];
     if (fmtHora(it.hora)) info.push(["escala","Horário", fmtHora(it.hora)]);
     if (it.local) info.push(["local","Local", it.local]);
@@ -2005,6 +2034,7 @@ body.pm-open .tabbar{z-index:60}
     const adm = canWrite && (role !== "staff" || own);
     $("#detEdit").hidden = !adm;
     $("#detDel").hidden = !adm;
+    const _arq = !!(window.DEMANDO_API && window.DEMANDO_API.arquivar); $("#detArq").hidden = !(adm && _arq && (it.arquivadaEm || !isOpen(it))); $("#detArq").textContent = it.arquivadaEm ? "Desarquivar" : "Arquivar";
     $("#detDup").hidden = !adm;
   }
   function renderDetailIfOpen(){ if (det.open && detItem) renderDetail(); }
@@ -2023,6 +2053,13 @@ body.pm-open .tabbar{z-index:60}
     delete copy.entregue; delete copy.nComent; delete copy.recorrente;
     det.close();
     if (await write(copy)){ toast("Cópia criada. Ajuste a data e o que mudar."); openForm(copy); }
+  });
+  $("#detArq").addEventListener("click", async () => {
+    const it = detItem; if (!it || !window.DEMANDO_API) return;
+    const voltar = !!it.arquivadaEm;
+    det.close();
+    if (await window.DEMANDO_API.arquivar(it.id, !voltar)) toast(voltar ? "Demanda desarquivada" : "Demanda arquivada", () => window.DEMANDO_API.arquivar(it.id, voltar));
+    else toast(voltar ? "Não deu pra desarquivar agora." : "Não deu pra arquivar agora.");
   });
   $("#detDel").addEventListener("click", () => {
     const it = detItem; if (!it) return;
@@ -2274,7 +2311,7 @@ body.pm-open .tabbar{z-index:60}
     const t = todayStr();
     const made = found.map((r, i) => ({
       id: "d" + Date.now().toString(36) + i + Math.random().toString(36).slice(2,6),
-      frente: r.frente, titulo: r.titulo, tipo: r.tipo, prazo: r.prazo, hora: r.hora, local: r.local, status: r.status, ...(r.status === "Entregue" ? {entregue: t} : {}),
+      frente: r.frente, titulo: r.titulo, tipo: r.tipo, prazo: r.prazo, hora: r.hora, local: r.local, status: r.status, ...(r.status === "Entregue" || r.status === "Postada" ? {entregue: t} : {}),
       prioridade: r.prioridade, solicitante: r.solicitante, secretaria: r.secretaria, perfil: r.perfil || "", equipe: r.equipe, responsavel: r.equipe.join(", "),
       link: "", obs: r.obs, original: r.original, checklist: r.checklist.map(c => ({t:c, ok:false})), criado: t, criadoEm: Date.now(), criadoPor: myId || "",
       historico: hist({}, files.length ? "Criada a partir de foto" : "Criada a partir de texto colado")
@@ -2605,7 +2642,7 @@ body.pm-open .tabbar{z-index:60}
         const sp = (txt, bg, fg) => { ctx.font = pf; const w = ctx.measureText(txt).width + Math.round(18*s); ctx.fillStyle = bg; rr(ctx, px, ty, w, m.pillH, m.pillH/2); ctx.fill(); ctx.fillStyle = fg; ctx.textBaseline = "middle"; ctx.fillText(txt, px + Math.round(9*s), ty + m.pillH/2 + 1); ctx.textBaseline = "alphabetic"; px += w + 6; };
         if (!one) sp(LBL[it.frente], areaSoftHex(it.frente), areaHex(it.frente));
         if (pc0) sp(primeiroNome(it.perfil), cS, pc0);
-        if (off) sp("✓ ENTREGUE", "#E3E7E4", SH.muted);
+        if (off) sp(it.status === "Postada" ? "✓ POSTADA" : "✓ ENTREGUE", "#E3E7E4", SH.muted);
         else if (it.status !== "A fazer") sp(it.status.toUpperCase(), SH.ink, "#fff");
         ty += m.pillH;
         }
@@ -3476,6 +3513,7 @@ body.pm-open .tabbar{z-index:60}
   function loadMeLocal(){ try { const p = JSON.parse(localStorage.getItem("cd-me") || "{}"); if (TODOS.includes(p.nome)) meNome = p.nome; if (Array.isArray(p.vistos)) vistos = new Set(p.vistos); } catch(e){} }
   let saveT = null;
   function saveMe(){
+    if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome);
     const data = {nome: meNome, vistos: Array.from(vistos).slice(-600)};
     try { localStorage.setItem("cd-me", JSON.stringify(data)); } catch(e){}
     clearTimeout(saveT);
@@ -3491,20 +3529,21 @@ body.pm-open .tabbar{z-index:60}
     mineOf(nome).forEach(i => { if (!(i.criadoEm && Date.now() - i.criadoEm < 172800000)) vistos.add(i.id); });
     saveMe(); render();
   }
-  function hello(open){
-    const n = unseenList().length;
-    const box = el("section",{class:"hello"},
-      el("div",{class:"hello-t"},
-        el("span",{class:"hello-av av " + avColor(meNome)}, ini(meNome)),
-        el("div",null, el("b",null,"Olá, " + meNome), el("span",null, open.length ? plural(open.length,"demanda em aberto com você","demandas em aberto com você") : "Nada em aberto com você agora"))),
-      el("div",{class:"hello-s"},
-        el("div",{class:"hs" + (n ? " hot" : "")}, el("b",null,n), el("span",null,"Novas escalas")),
-        el("div",{class:"hs"}, el("b",null, open.filter(i => i.prazo === todayStr()).length), el("span",null,"Para hoje")),
-        el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas"))),
-      el("div",{class:"hello-a"},
-        ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
-        el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe")));
-    return box;
+  function hello(open, who){
+    who = who || meNome; const eu = who === meNome;
+    const n = eu ? unseenList().length : 0, stats = [];
+    if (eu) stats.push(el("div",{class:"hs" + (n ? " hot" : "")}, el("b",null,n), el("span",null,"Novas escalas")));
+    stats.push(el("div",{class:"hs"}, el("b",null, open.filter(i => i.prazo === todayStr()).length), el("span",null,"Para hoje")), el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas")));
+    const acoes = eu ? [
+      ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
+      el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe"),
+      el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; if (window.DEMANDO_API) window.DEMANDO_API.limparNomeEquipe(); render(); }}, "Não sou eu")
+    ] : [el("button",{type:"button", class:"lnk-b", onclick:() => { pessoa = ""; fillPessoa(); savePrefs(); render(); }}, "Voltar às minhas escalas")];
+    return el("section",{class:"hello"},
+      el("div",{class:"hello-t"}, el("span",{class:"hello-av av " + avColor(who)}, ini(who)),
+        el("div",null, el("b",null, eu ? "Olá, " + who : "Escalas de " + who), el("span",null, open.length ? plural(open.length, eu ? "demanda em aberto com você" : "demanda em aberto", eu ? "demandas em aberto com você" : "demandas em aberto") : (eu ? "Nada em aberto com você agora" : "Nada em aberto agora")))),
+      el("div",{class:"hello-s"}, ...stats),
+      el("div",{class:"hello-a"}, ...acoes));
   }
   function nomesDoUsuario(){ const ks = (window.DEMANDO_API && window.DEMANDO_API.areas) || []; const l = Array.from(new Set(ks.flatMap(k => EQUIPES[k] || []))); return l.length ? l : TODOS; }
   function chooser(){
@@ -3518,12 +3557,12 @@ body.pm-open .tabbar{z-index:60}
         el("span",{class:"av " + avColor(n)}, ini(n)), n, n === guess ? el("small",null,"é você?") : null))));
   }
   function pinRow(it){ const r = row(it); r.classList.add("pinned"); r.prepend(el("span",{class:"pin", title:"Nova escala"}, icon("pin"))); return r; }
-  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); if (!meNome){ v.append(chooser()); return; } renderMinhas(v); }
-  function renderMinhas(v){
+  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); const who = (pessoa && TODOS.includes(pessoa)) ? pessoa : meNome; if (!who){ v.append(chooser()); return; } renderMinhas(v, who); }
+  function renderMinhas(v, who){ who = who || meNome; const eu = who === meNome;
     const t = todayStr(), tm = addDays(t,1), wk = addDays(t,7);
-    const mine = mineOf(meNome).filter(match).sort(order), open = mine.filter(isOpen);
-    v.append(hello(open));
-    const novas = open.filter(naoVisto), rest = open.filter(i => !naoVisto(i));
+    const mine = mineOf(who).filter(match).sort(order), open = mine.filter(isOpen);
+    v.append(hello(open, who));
+    const novas = eu ? open.filter(naoVisto) : [], rest = eu ? open.filter(i => !naoVisto(i)) : open;
     if (novas.length){
       const g = el("section",{class:"grp novas"},
         el("div",{class:"grp-h"}, el("h3",null,"Novas escalas"), el("span",{class:"n"}, novas.length),
@@ -3539,7 +3578,7 @@ body.pm-open .tabbar{z-index:60}
     if (sem.length) v.append(group("Próximos 7 dias", sem));
     if (dep.length) v.append(group("Mais pra frente", dep));
     if (sp.length) v.append(group("Sem prazo", sp));
-    const feitas = mine.filter(i => !isOpen(i) && (i.entregue || "") >= addDays(t,-7));
+    const feitas = mine.filter(i => !isOpen(i) && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7));
     if (feitas.length) v.append(group("Entregues nos últimos 7 dias", feitas, "done"));
     if (!open.length && !feitas.length) v.append(el("div",{class:"empty-st"}, el("b",null,"Tudo tranquilo"), "Quando te escalarem numa demanda, ela aparece aqui com um pino de atenção."));
   }
@@ -3618,7 +3657,7 @@ body.pm-open .tabbar{z-index:60}
     } catch(e){}
     if (f){ show = f; if (meNome && !EQUIPES[f].includes(meNome)){ meNome = ""; pessoa = ""; saveMe(); } fillPessoa(); }
     else { meNome = ""; pessoa = ""; saveMe(); notified = null; fillPessoa(); }
-    render(); window.scrollTo({top:0});
+    render(); scrollTopApp();
   }
   async function saveCfg(patch){
     const next = Object.assign({}, cfgData, patch);
@@ -3697,7 +3736,7 @@ body.pm-open .tabbar{z-index:60}
     staffFr = ""; try { localStorage.removeItem("cd-fr"); localStorage.removeItem("cd-frh"); } catch(e){}
     meNome = ""; pessoa = ""; saveMe(); notified = null;
     if (role === "admin") applyRole(); else { fillPessoa(); render(); }
-    window.scrollTo({top:0});
+    scrollTopApp();
   }
   /* ---------- Adicionar área (só admin) ---------- */
   const anDlg = $("#areaNew");
@@ -3866,8 +3905,8 @@ body.pm-open .tabbar{z-index:60}
     if (!db || !myId || perfilRef) return;
     try { perfilRef = db.collection("data/users/" + myId).doc("perfil"); } catch(e){ perfilRef = null; return; }
     try { const ps = await perfilRef.get(); const pd = ps && ps.exists ? ps.data() : null;
-      if (pd && TODOS.includes(pd.nome)){ meNome = pd.nome; vistos = new Set(Array.isArray(pd.vistos) ? pd.vistos : []); render(); }
-      else if (meNome) saveMe();
+      if (pd && Array.isArray(pd.vistos) && pd.vistos.length){ pd.vistos.forEach(x => vistos.add(x)); render(); }
+      if (meNome) saveMe();
     } catch(e){}
   }
   function setCfg(d){
