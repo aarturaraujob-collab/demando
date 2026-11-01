@@ -1087,6 +1087,7 @@ body.pm-open .tabbar{z-index:60}
 .pane .ph b[data-logo="faf"]::before{content:"";flex:none;display:block;width:27px;height:21px;margin:0;border-radius:0;box-shadow:none;background:url(assets/faf-emblem.png) center/contain no-repeat}
 .pane .ph b[data-logo="bm"]::before{content:"";flex:none;display:block;width:19px;height:24px;margin:0;border-radius:0;box-shadow:none;background:url(assets/bm-emblem.png) center/contain no-repeat}
 .fsec:has(#ckList){display:none}
+body.v-minhas .fsel:has(#pessoa){display:none}
 dialog.mvd .who-g{margin:2px 0 4px}
 @media (max-width:860px){
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
@@ -1618,7 +1619,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     const t = todayStr();
     const titles = {today:"Início", board:"Quadro", agenda:"Agenda", month:"Calendário", minhas:"Minhas escalas", escala:"Minha escala", mais:"Mais"};
     document.body.classList.toggle("staff", role === "staff");
-    document.body.classList.toggle("v-mais", view === "mais");
+    document.body.classList.toggle("v-mais", view === "mais"); document.body.classList.toggle("v-minhas", view === "minhas");
     const nUn = meNome ? unseenList().length : 0;
     $$("[data-bdg]").forEach(b => { b.hidden = !nUn; b.textContent = nUn > 9 ? "9+" : nUn; });
     document.title = (nUn ? "(" + nUn + ") " : "") + "Demandô";
@@ -3574,7 +3575,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
         el("span",{class:"av " + avColor(n)}, ini(n)), n, n === guess ? el("small",null,"é você?") : null))));
   }
   function pinRow(it){ const r = row(it); r.classList.add("pinned"); r.prepend(el("span",{class:"pin", title:"Nova escala"}, icon("pin"))); return r; }
-  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); const who = (pessoa && TODOS.includes(pessoa)) ? pessoa : meNome; if (!who){ v.append(chooser()); return; } renderMinhas(v, who); }
+  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); const who = meNome; if (pessoa){ pessoa = ""; fillPessoa(); } if (!who){ v.append(chooser()); return; } renderMinhas(v, who); }
   function renderMinhas(v, who){ who = who || meNome; const eu = who === meNome;
     const t = todayStr(), tm = addDays(t,1), wk = addDays(t,7);
     const mine = mineOf(who).filter(match).sort(order), open = mine.filter(isOpen);
@@ -3992,6 +3993,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 })();
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
-<script>window.__BUILD="0ea1e71e5e";</script>
+<script>window.__BUILD="85795da548";</script>
 </body>
 </html>

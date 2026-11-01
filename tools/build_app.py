@@ -250,6 +250,11 @@ rep(r"""    if (it.checklist && it.checklist.length){
       const ok = it.checklist.filter(c => c.ok).length, tot = it.checklist.length;""")
 rep(r"""    if (it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)")""", r"""    if (false && it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)")""")
 
+
+# 17) aba Minhas: só quem eu sou. Sem lista de outros nomes ali (o filtro de pessoa continua nas outras telas)
+rep(r"""const who = (pessoa && TODOS.includes(pessoa)) ? pessoa : meNome; if (!who){ v.append(chooser()); return; }""", r"""const who = meNome; if (pessoa){ pessoa = ""; fillPessoa(); } if (!who){ v.append(chooser()); return; }""")
+rep(r"""    document.body.classList.toggle("v-mais", view === "mais");""", r"""    document.body.classList.toggle("v-mais", view === "mais"); document.body.classList.toggle("v-minhas", view === "minhas");""")
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
 
@@ -312,6 +317,7 @@ css_extra += """
 .pane .ph b[data-logo="faf"]::before{content:"";flex:none;display:block;width:27px;height:21px;margin:0;border-radius:0;box-shadow:none;background:url(assets/faf-emblem.png) center/contain no-repeat}
 .pane .ph b[data-logo="bm"]::before{content:"";flex:none;display:block;width:19px;height:24px;margin:0;border-radius:0;box-shadow:none;background:url(assets/bm-emblem.png) center/contain no-repeat}
 .fsec:has(#ckList){display:none}
+body.v-minhas .fsel:has(#pessoa){display:none}
 dialog.mvd .who-g{margin:2px 0 4px}
 @media (max-width:860px){
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
