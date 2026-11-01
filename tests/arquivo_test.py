@@ -20,7 +20,7 @@ def espera_arq(i, v, s=8):
         time.sleep(0.25)
     return False
 async def entra(pg,u,s):
-    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800)
+    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800); await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()")
 def ins(i,t,status,entregue,prazo,por,extra=None):
     d={"id":i,"area_id":"asc","titulo":t,"status":status,"prazo":prazo,"entregue":entregue,"criado_por":por,"criado_em":"2026-01-01T12:00:00+00:00"}; d.update(extra or {})
     return requests.post(f"{BASE}/rest/v1/demandas", headers=SV, json=d)

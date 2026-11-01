@@ -80,3 +80,4 @@ subo as funções e configuro o que for preciso.
 - Endereço: GitHub Pages ou domínio próprio?
 - Supabase: gratuito no começo ou já o Pro?
 - Life: Gustavo, Júnior e Mariana entram como `leitor` (só acompanham)?
+- [x] **3i. Identidade por aparelho:** a conta BM/FAF é de várias pessoas, então "quem sou eu" fica no aparelho (janela "Quem é você?" ao entrar, uma vez por aparelho; "Não sou eu" troca). Os avisos vão pro aparelho certo (`push_subs.nome_equipe`) e a demanda guarda o nome de quem criou (`criado_por_nome`). Checklist, pedido original e "0/4" saíram da tela (dados mantidos). O app se atualiza sozinho quando sai versão nova (`versao.json`). Migrações 008 (desarquivar) e 009.

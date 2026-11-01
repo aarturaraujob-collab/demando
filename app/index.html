@@ -1084,8 +1084,10 @@ body.pm-open .tabbar{z-index:60}
 .flow .fs.cur i{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 26%,transparent)}
 .flow .fs.cur b{color:var(--c);font-weight:800}
 .flow .fs.past b{color:var(--muted)}
-.pane .ph b[data-logo="faf"]::before{content:"";display:inline-block;width:27px;height:21px;margin-right:9px;vertical-align:-4px;background:url(assets/faf-emblem.png) center/contain no-repeat}
-.pane .ph b[data-logo="bm"]::before{content:"";display:inline-block;width:19px;height:24px;margin-right:9px;vertical-align:-5px;background:url(assets/bm-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="faf"]::before{content:"";flex:none;display:block;width:27px;height:21px;margin:0;border-radius:0;box-shadow:none;background:url(assets/faf-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="bm"]::before{content:"";flex:none;display:block;width:19px;height:24px;margin:0;border-radius:0;box-shadow:none;background:url(assets/bm-emblem.png) center/contain no-repeat}
+.fsec:has(#ckList){display:none}
+dialog.mvd .who-g{margin:2px 0 4px}
 @media (max-width:860px){
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 .app{height:100%;height:100dvh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
@@ -1556,7 +1558,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     if (isOpen(it) && it.prazo === addDays(t,1)) return el("span",{class:"due"},"Amanhã");
     return el("span",{class:"due"}, fmt(it.prazo));
   }
-  function progEl(it){
+  function progEl(it){ return null;   /* o checklist saiu da tela */
     if (!it.checklist || !it.checklist.length) return null;
     const ok = it.checklist.filter(c=>c.ok).length, tot = it.checklist.length;
     return el("span",{class:"prog", style:"color:var(--"+it.frente+");--p:"+Math.round(ok/tot*100)+"%", title:"Checklist"}, el("i"), ok+"/"+tot);
@@ -1866,6 +1868,20 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   }
 
   function renderView(){ ({today:renderToday, board:renderBoard, agenda:renderAgenda, month:renderMonth, minhas:renderMinhasPage, escala:renderEscala, mais:renderMais})[view](); if (window.DEMANDO_API && (view === "today" || view === "mais")) $("#view").append(el("div",{class:"sair-box"}, el("button",{type:"button", class:"sair-b", onclick:() => { if (confirm("Sair da conta?")) window.DEMANDO_API.sair(); }}, icon("sair"), "Sair da conta"))); }
+  function perguntarQuem(){
+    if (role !== "staff" || meNome || !frOk() || !window.DEMANDO_API) return;
+    try { if (sessionStorage.getItem("cd-pulou") === "1") return; } catch(e){}
+    if (document.getElementById("whoDlg") || document.querySelector("dialog[open]")) return;
+    const nomes = nomesDoUsuario(); if (!nomes.length) return;
+    const dlg = el("dialog",{id:"whoDlg", class:"mvd", "aria-labelledby":"whoT"},
+      el("div",{class:"mvd-b", tabindex:"-1", autofocus:""},
+        el("h2",{class:"mvd-t", id:"whoT"}, "Quem é você?"),
+        el("p",null,"Escolha o seu nome. O Demandô lembra neste aparelho e não pergunta de novo. Em “Minhas” aparecem só as suas escalas e você recebe o aviso quando te escalarem. O resto do app continua mostrando a equipe toda."),
+        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { dlg.close(); setMe(n); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
+        el("button",{type:"button", class:"mvd-no", onclick:() => dlg.close()}, "Agora não")));
+    dlg.addEventListener("close", () => { if (!meNome){ try { sessionStorage.setItem("cd-pulou", "1"); } catch(e){} } dlg.remove(); });
+    document.body.append(dlg); dlg.showModal();
+  }
   function render(){
     if (!ALL_VIEWS.some(x => x[0] === view)) view = "today";
     if (role === "staff" && view === "mais") view = "today";
@@ -1880,6 +1896,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     $("#meHold").replaceChildren(); renderAreaBanner();
     if (view === "today" && role === "staff" && !meNome && !(PERFIS[staffFr] || []).length && nomesDoUsuario().length) $("#meHold").append(chooser());
     syncChrome(); renderSum(); renderView();
+    perguntarQuem();
   }
 
   /* ---------- Toast ---------- */
@@ -2004,7 +2021,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     const t = team(it);
     b.append(el("div",null, el("p",{class:"sec-l"},"Equipe"),
       t.length ? el("div",{class:"ppl"}, ...t.map(n => el("span",null, el("span",{class:"av " + avColor(n)}, ini(n)), n))) : el("p",{class:"hint"},"Ninguém escalado ainda." + (role === "staff" ? "" : " Toque em Editar para escolher."))));
-    if (it.checklist && it.checklist.length){
+    if (false && it.checklist && it.checklist.length){
       const ok = it.checklist.filter(c => c.ok).length, tot = it.checklist.length;
       const list = el("div",{class:"ck"}, ...it.checklist.map((c, i) => el("label",{class:"ck-i" + (c.ok ? " ok" : "")},
         el("input",{type:"checkbox", checked: c.ok ? "" : false, disabled: canWrite ? false : "", onchange:e => {
@@ -2017,7 +2034,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     if (it.link && /^https?:\/\//i.test(it.link)) b.append(el("a",{class:"lnk", href:it.link, target:"_blank", rel:"noopener"},"Abrir link da entrega"));
     const ag = anexosGrid(it.anexos); if (ag) b.append(el("div",null, el("p",{class:"sec-l"},"Links e arquivos"), ag));
     b.append(commentsSection(it)); renderComments();
-    if (it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)"), el("p",{class:"orig"}, it.original)));
+    if (false && it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)"), el("p",{class:"orig"}, it.original)));
     if (Array.isArray(it.historico) && it.historico.length){
       const hl = it.historico.slice().reverse();
       const box = el("ol",{class:"hist"}, ...hl.map(h => { const d = new Date(h.em);
@@ -3517,7 +3534,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     const data = {nome: meNome, vistos: Array.from(vistos).slice(-600)};
     try { localStorage.setItem("cd-me", JSON.stringify(data)); } catch(e){}
     clearTimeout(saveT);
-    saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome); }, 400);
+    saveT = null;
   }
   const mineOf = nome => items.filter(i => nome && team(i).includes(nome));
   const naoVisto = i => !vistos.has(i.id) || (i.ajusteEm && !vistos.has(i.id + "@" + i.ajusteEm));
@@ -3537,7 +3554,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     const acoes = eu ? [
       ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
       el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe"),
-      el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; if (window.DEMANDO_API) window.DEMANDO_API.limparNomeEquipe(); render(); }}, "Não sou eu")
+      el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; if (window.DEMANDO_API) window.DEMANDO_API.limparNomeEquipe(); try { sessionStorage.removeItem("cd-pulou"); } catch(e){} render(); }}, "Não sou eu")
     ] : [el("button",{type:"button", class:"lnk-b", onclick:() => { pessoa = ""; fillPessoa(); savePrefs(); render(); }}, "Voltar às minhas escalas")];
     return el("section",{class:"hello"},
       el("div",{class:"hello-t"}, el("span",{class:"hello-av av " + avColor(who)}, ini(who)),
@@ -3902,7 +3919,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 
   let cfgLoaded = false;
   async function loadPerfil(){
-    if (!db || !myId || perfilRef) return;
+    return;   /* quem sou eu e as escalas já vistas ficam só neste aparelho: a conta BM é usada por várias pessoas */
     try { perfilRef = db.collection("data/users/" + myId).doc("perfil"); } catch(e){ perfilRef = null; return; }
     try { const ps = await perfilRef.get(); const pd = ps && ps.exists ? ps.data() : null;
       if (pd && Array.isArray(pd.vistos) && pd.vistos.length){ pd.vistos.forEach(x => vistos.add(x)); render(); }
@@ -3975,5 +3992,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 })();
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
+<script>window.__BUILD="0ea1e71e5e";</script>
 </body>
 </html>

@@ -10,7 +10,7 @@ STUB="if(!('PushManager' in window)){window.PushManager=function(){};PushManager
 res=[]
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:120] if d else ""))
 async def entra(pg,u,s):
-    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(3000)
+    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(3000); await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()")
 BANNER="(()=>{const b=document.querySelector('#areaBanner'); if(!b||b.hidden) return null; const i=b.querySelector('img'); return {classe:b.className, img: !!i && i.complete && i.naturalWidth>0, texto:b.innerText.trim()}})()"
 async def main():
   async with async_playwright() as p:

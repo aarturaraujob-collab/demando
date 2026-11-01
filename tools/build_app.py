@@ -218,6 +218,38 @@ rep(r"""window.scrollTo({top:0})""", r"""scrollTopApp()""", 3)
 rep(r"""  function setView(v){""", r"""  function scrollTopApp(){ const a = document.querySelector(".app"); if (a && a.scrollTo) a.scrollTo({top:0}); window.scrollTo({top:0}); }
   function setView(v){""")
 
+
+# 16) identidade por APARELHO (a conta BM é de várias pessoas), pergunta ao entrar, e checklist/pedido original/progresso fora da tela
+rep(r"""    saveT = setTimeout(() => { if (perfilRef) perfilRef.set(data).catch(() => {}); if (meNome && window.DEMANDO_API) window.DEMANDO_API.guardarNomeEquipe(meNome); }, 400);""", r"""    saveT = null;""")
+rep(r"""    if (!db || !myId || perfilRef) return;""", r"""    return;   /* quem sou eu e as escalas já vistas ficam só neste aparelho: a conta BM é usada por várias pessoas */""")
+rep(r"""window.DEMANDO_API.limparNomeEquipe(); render(); }}, "Não sou eu")""", r"""window.DEMANDO_API.limparNomeEquipe(); try { sessionStorage.removeItem("cd-pulou"); } catch(e){} render(); }}, "Não sou eu")""")
+rep(r"""  function render(){
+    if (!ALL_VIEWS.some(x => x[0] === view)) view = "today";""", r"""  function perguntarQuem(){
+    if (role !== "staff" || meNome || !frOk() || !window.DEMANDO_API) return;
+    try { if (sessionStorage.getItem("cd-pulou") === "1") return; } catch(e){}
+    if (document.getElementById("whoDlg") || document.querySelector("dialog[open]")) return;
+    const nomes = nomesDoUsuario(); if (!nomes.length) return;
+    const dlg = el("dialog",{id:"whoDlg", class:"mvd", "aria-labelledby":"whoT"},
+      el("div",{class:"mvd-b", tabindex:"-1", autofocus:""},
+        el("h2",{class:"mvd-t", id:"whoT"}, "Quem é você?"),
+        el("p",null,"Escolha o seu nome. O Demandô lembra neste aparelho e não pergunta de novo. Em “Minhas” aparecem só as suas escalas e você recebe o aviso quando te escalarem. O resto do app continua mostrando a equipe toda."),
+        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { dlg.close(); setMe(n); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
+        el("button",{type:"button", class:"mvd-no", onclick:() => dlg.close()}, "Agora não")));
+    dlg.addEventListener("close", () => { if (!meNome){ try { sessionStorage.setItem("cd-pulou", "1"); } catch(e){} } dlg.remove(); });
+    document.body.append(dlg); dlg.showModal();
+  }
+  function render(){
+    if (!ALL_VIEWS.some(x => x[0] === view)) view = "today";""")
+rep(r"""    syncChrome(); renderSum(); renderView();
+  }""", r"""    syncChrome(); renderSum(); renderView();
+    perguntarQuem();
+  }""")
+rep(r"""  function progEl(it){""", r"""  function progEl(it){ return null;   /* o checklist saiu da tela */""")
+rep(r"""    if (it.checklist && it.checklist.length){
+      const ok = it.checklist.filter(c => c.ok).length, tot = it.checklist.length;""", r"""    if (false && it.checklist && it.checklist.length){
+      const ok = it.checklist.filter(c => c.ok).length, tot = it.checklist.length;""")
+rep(r"""    if (it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)")""", r"""    if (false && it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Pedido original (transcrição)")""")
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
 
@@ -277,8 +309,10 @@ css_extra += """
 .flow .fs.cur i{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 26%,transparent)}
 .flow .fs.cur b{color:var(--c);font-weight:800}
 .flow .fs.past b{color:var(--muted)}
-.pane .ph b[data-logo="faf"]::before{content:"";display:inline-block;width:27px;height:21px;margin-right:9px;vertical-align:-4px;background:url(assets/faf-emblem.png) center/contain no-repeat}
-.pane .ph b[data-logo="bm"]::before{content:"";display:inline-block;width:19px;height:24px;margin-right:9px;vertical-align:-5px;background:url(assets/bm-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="faf"]::before{content:"";flex:none;display:block;width:27px;height:21px;margin:0;border-radius:0;box-shadow:none;background:url(assets/faf-emblem.png) center/contain no-repeat}
+.pane .ph b[data-logo="bm"]::before{content:"";flex:none;display:block;width:19px;height:24px;margin:0;border-radius:0;box-shadow:none;background:url(assets/bm-emblem.png) center/contain no-repeat}
+.fsec:has(#ckList){display:none}
+dialog.mvd .who-g{margin:2px 0 4px}
 @media (max-width:860px){
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 .app{height:100%;height:100dvh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
@@ -311,7 +345,12 @@ h2 = h2.replace('<script type="text/plain" id="appcode">', libs + '<script type=
 pwa_head = '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon-192.png">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Demandô">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n'
 assert "<title>Demandô</title>" in h2; h2 = h2.replace("<title>Demandô</title>", "<title>Demandô</title>\n" + pwa_head, 1)
 h2 = h2.replace("</body>", '<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>\n</body>')
+import hashlib
+h2 = h2.replace("</body>", '<script>window.__BUILD="__BUILD_ID__";</script>\n</body>')
+_bid = hashlib.sha1((h2 + "".join(open(os.path.join(aqui, f), encoding="utf-8").read() for f in ("adapter.js", "config.js", "pwa/sw.js"))).encode()).hexdigest()[:10]
+h2 = h2.replace("__BUILD_ID__", _bid)
 os.makedirs(out, exist_ok=True)
+open(os.path.join(out, "versao.json"), "w").write('{"v":"%s"}' % _bid)
 open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(h2)
 for f in ("adapter.js", "config.js"): shutil.copy(os.path.join(aqui, f), os.path.join(out, f))
 for f in ("manifest.webmanifest", "sw.js"): shutil.copy(os.path.join(aqui, "pwa", f), os.path.join(out, f))

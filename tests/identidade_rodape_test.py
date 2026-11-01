@@ -1,4 +1,4 @@
-"""Nome só uma vez (e valendo em outro aparelho), \"Não sou eu\", filtro de pessoa só pra olhar, rodapé fixo ao rolar. App local em http://localhost:8766.
+"""Nome só uma vez POR APARELHO, \"Não sou eu\", filtro de pessoa só pra olhar, rodapé fixo ao rolar. App local em http://localhost:8766.
 Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/identidade_rodape_test.py"""
 import asyncio, os, time, requests
 from playwright.async_api import async_playwright
@@ -16,7 +16,7 @@ def espera_nome(u, esperado, s=8):
         time.sleep(0.25)
     return False
 async def entra(pg,u,s):
-    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800)
+    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800); await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()")
 async def ola(pg):
     await pg.click("#tabbar [data-view=minhas]"); await pg.wait_for_timeout(900); return (await pg.inner_text("#view"))[:60].replace("\n"," | ")
 async def main():
@@ -25,30 +25,30 @@ async def main():
     try:
       requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Pessoa Id","usuario":"tst.id","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.id'")[0]['id']
       sql(f"update public.pessoas set papel='membro' where id='{uid}'"); sql(f"insert into public.acessos values ('{uid}','asc')")
-      print("######## 'QUEM É VOCÊ?' SÓ UMA VEZ (conta nova)")
+      print("######## 'QUEM É VOCÊ?' VALE POR APARELHO (conta nova)")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: asyncio.ensure_future(d.accept()))
+      eu=lambda page: page.evaluate(f"localStorage.getItem('cd-eu@{uid}')")
       await entra(pg,"tst.id","SenhaForte123")
-      chk("primeira vez: o cartão 'Quem é você?' aparece", await pg.locator("#meHold .who-pick").count()==1)
+      chk("primeira vez: o cartão 'Quem é você?' está à mão (a janela foi dispensada)", await pg.locator("#meHold .who-pick").count()==1)
       await pg.click(".who-b:has-text('Celso')"); await pg.wait_for_timeout(1200)
-      chk("escolheu 'Celso': o cartão some e o nome fica gravado no servidor", await pg.locator("#meHold .who-pick").count()==0 and espera_nome("tst.id","Celso"), nome_eq("tst.id"))
+      chk("escolheu 'Celso': o cartão some, o nome fica NO APARELHO e a conta continua sem nome", await pg.locator("#meHold .who-pick").count()==0 and (await eu(pg))=="Celso" and nome_eq("tst.id") is None, nome_eq("tst.id"))
       await pg.reload(); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(2500)
-      chk("recarregou a página: NÃO pergunta de novo", await pg.locator("#meHold .who-pick").count()==0)
+      chk("recarregou a página: NÃO pergunta de novo", await pg.locator("#meHold .who-pick").count()==0 and not await pg.evaluate("!!document.getElementById('whoDlg')"))
       t=await ola(pg); chk("e a aba Minhas já mostra 'Olá, Celso'", "Olá, Celso" in t, t)
-      ctx2=await b.new_context(**dev); await ctx2.add_init_script(STUB); pg2=await ctx2.new_page(); await entra(pg2,"tst.id","SenhaForte123")
-      chk("OUTRO aparelho (primeiro acesso nele): NÃO pergunta de novo", await pg2.locator("#meHold .who-pick").count()==0); t=await ola(pg2); chk("e já entra como 'Olá, Celso'", "Olá, Celso" in t, t); await ctx2.close()
+      ctx2=await b.new_context(**dev); await ctx2.add_init_script(STUB); pg2=await ctx2.new_page(); await pg2.goto(URL); await pg2.wait_for_selector("#g-usuario"); await pg2.fill("#g-usuario","tst.id"); await pg2.fill("#g-senha","SenhaForte123"); await pg2.click("#g-entrar"); await pg2.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg2.wait_for_timeout(2800)
+      chk("OUTRO aparelho, mesma conta: PERGUNTA de novo (a conta é de várias pessoas)", await pg2.evaluate("(()=>{const d=document.getElementById('whoDlg'); return !!d && d.open})()")); await ctx2.close()
       await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(500); await pg.evaluate(APP_SCROLL,'fim'); await pg.wait_for_timeout(400); await pg.click(".sair-b"); await pg.wait_for_selector("#g-usuario", timeout=15000)
-      await entra(pg,"tst.id","SenhaForte123"); chk("saiu da conta e entrou de novo: NÃO pergunta de novo", await pg.locator("#meHold .who-pick").count()==0)
+      await entra(pg,"tst.id","SenhaForte123"); chk("saiu da conta e entrou de novo neste aparelho: NÃO pergunta de novo", await pg.locator("#meHold .who-pick").count()==0)
       t=await ola(pg); chk("continua 'Olá, Celso'", "Olá, Celso" in t, t)
-      print("== trocar de nome de propósito")
       await pg.click("#view .hello-a .lnk-b:has-text('Não sou eu')"); await pg.wait_for_timeout(1000)
-      chk("'Não sou eu' limpa o nome no servidor e mostra a escolha", await pg.locator("#view .who-pick").count()==1 and espera_nome("tst.id",None), nome_eq("tst.id"))
-      await pg.click(".who-b:has-text('Sara')"); await pg.wait_for_timeout(1200); chk("escolhendo 'Sara', ela vira o nome permanente", espera_nome("tst.id","Sara"), nome_eq("tst.id"))
-      ctx3=await b.new_context(**dev); await ctx3.add_init_script(STUB); pg3=await ctx3.new_page(); await entra(pg3,"tst.id","SenhaForte123"); t=await ola(pg3); chk("outro aparelho já entra como 'Olá, Sara' (e não volta pro Celso)", "Olá, Sara" in t, t); await ctx3.close()
+      chk("'Não sou eu' mostra a escolha de novo", await pg.locator("#view .who-pick").count()==1 or await pg.evaluate("!!document.getElementById('whoDlg')"))
+      await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()"); await pg.wait_for_timeout(400)
+      await pg.click(".who-b:has-text('Sara')"); await pg.wait_for_timeout(1200); chk("escolhendo 'Sara', ela vira o nome deste aparelho", (await eu(pg))=="Sara")
       print("== filtro de pessoa: só pra olhar, não muda quem eu sou")
       await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(800); await pg.select_option("#pessoa","Juninho"); await pg.wait_for_timeout(900)
       linhas=await pg.evaluate("[...document.querySelectorAll('#view .rw')].map(r=>((r.querySelector('.avs')||{}).innerText||''))"); chk("escolher 'Juninho' no filtro mostra só as demandas dele", len(linhas)>0 and all('Juninho' in x for x in linhas), len(linhas))
       t=await ola(pg); chk("na aba Minhas aparece 'Escalas de Juninho' com o botão pra voltar", "Escalas de Juninho" in t and await pg.locator("#view .lnk-b:has-text('Voltar às minhas escalas')").count()==1, t)
-      chk("quem eu sou continua sendo a Sara no servidor", nome_eq("tst.id")=="Sara")
+      chk("quem eu sou continua sendo a Sara (neste aparelho)", (await eu(pg))=="Sara")
       await pg.click("#view .lnk-b:has-text('Voltar às minhas escalas')"); await pg.wait_for_timeout(800); chk("'Voltar às minhas escalas' traz de volta 'Olá, Sara'", "Olá, Sara" in (await pg.inner_text("#view")))
       await pg.select_option("#pessoa","Juninho"); await pg.reload(); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(2500)
       chk("o filtro NÃO fica gravado: ao recarregar volta pra 'Toda a equipe'", await pg.evaluate("document.querySelector('#pessoa').value===''")); await ctx.close()

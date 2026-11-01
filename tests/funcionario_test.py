@@ -12,7 +12,7 @@ def cria_func(usuario):
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:140] if d else ""))
 STUB="if(!('PushManager' in window)){window.PushManager=function(){};PushManager.prototype.getSubscription=async function(){return null};}"
 async def entra(pg,u,s):
-    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800)
+    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar, #sideViews", state="attached", timeout=30000); await pg.wait_for_timeout(2800); await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()")
 LINHAS="""(nome) => { const rows=[...document.querySelectorAll('#view .rw')]; const com=rows.filter(r=>((r.querySelector('.avs')||{}).innerText||'').includes(nome)).length; return {total:rows.length, comEle:com, semEle:rows.length-com} }"""
 async def main():
   async with async_playwright() as p:

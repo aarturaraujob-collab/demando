@@ -19,7 +19,7 @@ async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(); errs=[]
     ctxA=await b.new_context(viewport={"width":390,"height":844}, accept_downloads=True); A=await ctxA.new_page()
-    ctxB=await b.new_context(viewport={"width":390,"height":844}); B=await ctxB.new_page()
+    ctxB=await b.new_context(viewport={"width":390,"height":844}); await ctxB.add_init_script("try{sessionStorage.setItem('cd-pulou','1')}catch(e){}"); B=await ctxB.new_page()
     for pg,n in ((A,"admin"),(B,"membro")):
         pg.on("pageerror", lambda e,n=n: errs.append(f"{n} JS: {e}"))
         pg.on("dialog", lambda d: asyncio.ensure_future(d.accept()))
@@ -107,7 +107,7 @@ async def main():
         await B.click(".fr-pick.fed"); await B.wait_for_timeout(1500); chk("escolheu FAF: vê a demanda da FAF", await B.locator(".rw:has-text('FULL-com anexo')").count()>=1)
         await A.click("#tabbar [data-view=mais]"); await A.click(".mtabs button:has-text('Pessoas')"); await A.wait_for_selector("[data-senha='tst.full']")
         await A.fill("[data-senha='tst.full']","NovaSenha456"); await A.click("[data-redefinir='tst.full']"); await A.wait_for_timeout(2500)
-        ctxC=await b.new_context(viewport={"width":390,"height":844}); C=await ctxC.new_page(); C.on("pageerror", lambda e: errs.append(f"C JS: {e}"))
+        ctxC=await b.new_context(viewport={"width":390,"height":844}); await ctxC.add_init_script("try{sessionStorage.setItem('cd-pulou','1')}catch(e){}"); C=await ctxC.new_page(); C.on("pageerror", lambda e: errs.append(f"C JS: {e}"))
         await C.goto(URL); await C.wait_for_selector("#g-usuario"); await C.fill("#g-usuario","tst.full"); await C.fill("#g-senha","SenhaForte123"); await C.click("#g-entrar"); await C.wait_for_selector("#g-erro:not([hidden])")
         chk("senha antiga deixou de valer", "incorretos" in await C.inner_text("#g-erro"))
         await C.fill("#g-senha","NovaSenha456"); await C.click("#g-entrar"); await C.wait_for_selector("#tabbar", state="visible", timeout=25000); chk("senha nova (redefinida pelo admin) funciona", True); await ctxC.close()

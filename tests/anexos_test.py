@@ -10,7 +10,7 @@ STUB="Object.defineProperty(navigator,'canShare',{value:()=>true,configurable:tr
 res=[]
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:130] if d else ""))
 async def entra(pg,u,s):
-    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(3000)
+    await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario",u); await pg.fill("#g-senha",s); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(3000); await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()")
 async def abre(pg, titulo):
     await pg.click("#tabbar [data-view=board]"); await pg.wait_for_timeout(700); await pg.fill("input[type=search]", titulo); await pg.wait_for_timeout(800)
     await pg.click(f".card:has-text('{titulo}') .tt >> nth=0"); await pg.wait_for_selector("#detBody .ax-w", timeout=15000)

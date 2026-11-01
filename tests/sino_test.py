@@ -17,7 +17,7 @@ async def main():
     b=await p.chromium.launch(); ctx=await b.new_context(viewport={"width":390,"height":844}, permissions=["notifications"]); await ctx.add_init_script(STUB); pg=await ctx.new_page(); errs=[]
     pg.on("pageerror", lambda e: errs.append(str(e))); uid=None
     try:
-        sql("delete from public.push_subs"); adm=sql("select id from public.pessoas where usuario='admin'")[0]['id']
+        sql("delete from public.push_subs where endpoint like 'https://push.example.invalid%'"); adm=sql("select id from public.pessoas where usuario='admin'")[0]['id']
         await pg.goto(URL); await pg.wait_for_selector("#g-usuario"); await pg.fill("#g-usuario","admin"); await pg.fill("#g-senha",ADMIN); await pg.click("#g-entrar"); await pg.wait_for_selector("#tabbar", state="visible", timeout=25000); await pg.wait_for_timeout(2500)
         print("== SININHO")
         chk("sininho aparece no topo (celular), desligado", await pg.locator(".mtop #sino").count()==1 and not await pg.evaluate("document.querySelector('#sino').classList.contains('on')"))
@@ -50,7 +50,7 @@ async def main():
             chk("o celular mostra a notificação (título e texto certos)", ns==[["Nova escala","Teste de aviso · 30 out","t1"]], ns)
         else: print("  ⚠ não consegui pegar o service worker pelo CDP; teste da exibição não executado")
     finally:
-        sql("delete from public.demandas where titulo like 'PUSH-%'"); sql("delete from public.push_subs"); sql("delete from public.push_log")
+        sql("delete from public.demandas where titulo like 'PUSH-%'"); sql("delete from public.push_subs where endpoint like 'https://push.example.invalid%'"); sql("delete from public.push_log")
         if uid: requests.delete(f"{BASE}/auth/v1/admin/users/{uid}", headers=SV)
         print("limpeza →", sql("select (select count(*) from auth.users) users, (select count(*) from public.push_subs) subs, (select count(*) from public.demandas where titulo like 'PUSH-%') push"), "| erros de JS:", errs)
         print(f"RESULTADO: {sum(res)} de {len(res)}"); await b.close()

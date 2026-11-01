@@ -7,8 +7,15 @@ const CFG = window.DEMANDO;
 const sb = window.supabase.createClient(CFG.url, CFG.anon, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
 const API = window.DEMANDO_API = { sb, pessoa: null, acessos: [], areas: [], sair: async () => { try { if (API.sinoSair) await API.sinoSair(); await sb.auth.signOut(); } catch(e){} location.reload(); } };
 let UID = null;
-API.guardarNomeEquipe = async nome => { try { if (!nome || !UID || (API.pessoa && API.pessoa.nome_equipe === nome)) return; const r = await sb.from("pessoas").update({ nome_equipe:nome }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = nome; } catch(e){} };
-API.limparNomeEquipe = async () => { try { if (!UID) return; const r = await sb.from("pessoas").update({ nome_equipe:null }).eq("id", UID); if (!r.error && API.pessoa) API.pessoa.nome_equipe = null; } catch(e){} };
+/* "quem sou eu" vale por APARELHO (a conta BM/FAF é de várias pessoas): fica no próprio celular, por conta. */
+const chaveEu = () => "cd-eu@" + UID;
+function identidade(){ try { const v = localStorage.getItem(chaveEu()); if (v === "-") return ""; if (v) return v; } catch(e){} return (API.pessoa && API.pessoa.nome_equipe) || ""; }
+async function nomeNoAparelho(nome){      // o aparelho avisa em nome de quem usa (é o que decide quem recebe cada notificação)
+  try { if (!("serviceWorker" in navigator)) return; const reg = await navigator.serviceWorker.ready; if (!reg.pushManager) return; const s = await reg.pushManager.getSubscription(); if (s) await sb.from("push_subs").update({ nome_equipe: nome || null }).eq("endpoint", s.endpoint); } catch(e){}
+}
+API.lembrarEu = async nome => { if (!nome || !UID) return; try { if (localStorage.getItem(chaveEu()) === nome) return; localStorage.setItem(chaveEu(), nome); } catch(e){} await nomeNoAparelho(nome); };
+API.esquecerEu = async () => { if (!UID) return; try { localStorage.setItem(chaveEu(), "-"); } catch(e){} await nomeNoAparelho(null); };
+API.guardarNomeEquipe = API.lembrarEu; API.limparNomeEquipe = API.esquecerEu;
 API.arquivar = async (id, sim) => { try { const agora = new Date().toISOString(), r = await sb.from("demandas").update(sim ? { arquivada_em: agora, desarquivada_em: null } : { arquivada_em: null, desarquivada_em: agora }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
 
 /* ---------- utilidades ---------- */
@@ -34,7 +41,7 @@ function demPartial(p){ const row = {}; for (const [k, v] of Object.entries(p ||
 const demDe = r => ({ id:r.id, frente:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), prazo:sz(r.prazo), hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local), status:r.status,
   prioridade:r.prioridade, solicitante:sz(r.solicitante), secretaria:sz(r.secretaria), perfil:sz(r.perfil), equipe:r.equipe || [], responsavel:(r.equipe || []).join(", "), link:sz(r.link), obs:sz(r.obs),
   original:sz(r.original), checklist:r.checklist || [], anexos:r.anexos || [], historico:r.historico || [], criado:sz(r.criado), criadoEm:ms(r.criado_em), entregue:sz(r.entregue),
-  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "", arquivadaEm:r.arquivada_em ? ms(r.arquivada_em) : 0 });
+  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "", criadoPorNome:sz(r.criado_por_nome), arquivadaEm:r.arquivada_em ? ms(r.arquivada_em) : 0 });
 const areaDe = r => r.removida ? null : ({ id:r.id, sigla:r.sigla, nome:r.nome, cor:r.cor, equipe:r.equipe || [], perfis:r.perfis || [], tipos:r.tipos || [], soAdmin:!!r.so_admin, hash:"T", criado:ms(r.criado_em) });
 const areaRow = d => ({ sigla:d.sigla, nome:d.nome, cor:d.cor, equipe:d.equipe || [], perfis:d.perfis || [], tipos:d.tipos || [], so_admin:!!d.soAdmin, removida:false });
 const recDe = r => ({ id:r.id, ativo:r.ativo, area:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), freq:r.freq, dias:r.dias || [], dia:r.dia, hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local),
@@ -82,7 +89,7 @@ const DOC_CONFIG = { hash:"ADM", fedHash:"T", ascHash:"T", em:0 };
 function colecao(path){
   let m;
   if (path === "demandas") return { onSnapshot:(cb, e) => ao_vivo("demandas", demDe, null, cb, e), doc: id => ({
-    async set(d){ await atualizaOuInsere("demandas", id, demPartial(d), Object.assign(demPartial(d), { criado: /^\d{4}-\d{2}-\d{2}$/.test(d.criado || "") ? d.criado : hoje(), criado_por: UID })); },
+    async set(d){ await atualizaOuInsere("demandas", id, demPartial(d), Object.assign(demPartial(d), { criado: /^\d{4}-\d{2}-\d{2}$/.test(d.criado || "") ? d.criado : hoje(), criado_por: UID, criado_por_nome: identidade() || null })); },
     async update(p){ const row = demPartial(p); if (!Object.keys(row).length) return; const r = await sb.from("demandas").update(row).eq("id", id); if (r.error) throw erro(r.error); },
     async delete(){ const r = await sb.from("demandas").delete().eq("id", id); if (r.error) throw erro(r.error); } }) };
   if (path === "areas") return { onSnapshot:(cb, e) => ao_vivo("areas", areaDe, null, cb, e), doc: id => ({
@@ -215,7 +222,7 @@ function iniciarSino(){
   const pos = () => { const t = alvo(); if (b.parentNode !== t) t.append(b); };
   const urlB64 = s => { const p = "=".repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
   const marca = on => { b.classList.toggle("on", on); b.title = on ? "Notificações ligadas neste aparelho (toque pra desligar)" : "Ligar notificações neste aparelho"; };
-  const salvar = async s => { const j = s.toJSON(); const r = await sb.from("push_subs").upsert({ pessoa_id:UID, endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth }, { onConflict:"endpoint" }); if (r.error) throw r.error; };
+  const salvar = async s => { const j = s.toJSON(); const r = await sb.from("push_subs").upsert({ pessoa_id:UID, endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth, nome_equipe:identidade() || null }, { onConflict:"endpoint" }); if (r.error) throw r.error; };
   API.sinoSair = async () => { try { const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription(); if (s){ await sb.from("push_subs").delete().eq("endpoint", s.endpoint); } } catch(e){} };
   b.addEventListener("click", async () => {
     try {
@@ -226,7 +233,7 @@ function iniciarSino(){
       const perm = await Notification.requestPermission();
       if (perm !== "granted"){ dica("As notificações estão bloqueadas. Libere nas configurações do navegador."); return; }
       const s = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(CFG.vapid) });
-      await salvar(s); marca(true); dica("Notificações ativadas. Já já chega um aviso de teste."); sb.rpc("testar_aviso").then(() => {}, () => {});
+      await salvar(s); marca(true); dica("Notificações ativadas. Já já chega um aviso de teste."); sb.rpc("testar_aviso", { p_endpoint:s.endpoint }).then(() => {}, () => {});
     } catch(e){ dica("Não deu pra ativar as notificações agora."); }
   });
   pos(); window.addEventListener("resize", pos); setTimeout(pos, 800);
@@ -309,6 +316,24 @@ function carregarLogos(){
   }).catch(() => ({}));
 }
 
+
+/* ---------- atualização automática: se saiu versão nova, o app se atualiza sozinho (só fora de formulários abertos) ---------- */
+function iniciarAtualizacao(){
+  const atual = window.__BUILD; if (!atual) return;
+  const ver = async () => {
+    try {
+      const r = await fetch("versao.json?t=" + Date.now(), { cache:"no-store" }); if (!r.ok) return; const j = await r.json(); if (!j || !j.v || j.v === atual) return;
+      if (sessionStorage.getItem("cd-recarregou") === j.v) return;                 // uma vez só por versão (nunca em laço)
+      if (document.querySelector("dialog[open]")){ setTimeout(ver, 20000); return; }   // não derruba quem está preenchendo algo
+      sessionStorage.setItem("cd-recarregou", j.v);
+      let t = document.getElementById("atuT"); if (!t){ t = document.createElement("div"); t.id = "atuT"; t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);background:#121A17;color:#F3F4F1;padding:12px 18px;border-radius:14px;font:700 14px system-ui;z-index:500;box-shadow:0 10px 30px rgba(0,0,0,.4)"; document.body.append(t); }
+      t.textContent = "Nova versão do Demandô. Atualizando…"; setTimeout(() => location.reload(), 1300);
+    } catch(e){}
+  };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") ver(); });
+  setInterval(ver, 5 * 60 * 1000); setTimeout(ver, 5000);
+}
+
 /* ---------- depois de entrar ---------- */
 async function seguir(){
   tela(h("p", { class:"gs" }, "Carregando…"));
@@ -327,13 +352,14 @@ async function seguir(){
     if (admin){ localStorage.setItem("cd-adm", "ADM"); localStorage.removeItem("cd-fr"); localStorage.removeItem("cd-frh"); }
     else { localStorage.removeItem("cd-adm"); const atual = localStorage.getItem("cd-fr"); const fr = visiveis.includes(atual) ? atual : visiveis[0]; localStorage.setItem("cd-fr", fr); localStorage.setItem("cd-frh", "T"); }
   } catch(e){}
-  try { if (p.data.nome_equipe){ const cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); cur.nome = p.data.nome_equipe; localStorage.setItem("cd-me", JSON.stringify(cur)); } } catch(e){}
+  try { const nome = identidade(), cur = JSON.parse(localStorage.getItem("cd-me") || "{}"); cur.nome = nome; localStorage.setItem("cd-me", JSON.stringify(cur)); } catch(e){}
   document.body.classList.toggle("sem-voltar", admin || visiveis.length < 2); document.body.classList.toggle("e-admin", admin);
   montarClaude(); gate.remove(); document.body.classList.remove("gate");
   window.DEMANDO_LOGOS = await carregarLogos();
   const s = document.createElement("script"); s.textContent = document.getElementById("appcode").textContent; document.body.append(s);
   iniciarSino();
   iniciarAnexos();
+  iniciarAtualizacao();
 }
 (async () => { const { data: { session } } = await sb.auth.getSession(); if (session) seguir(); else telaEntrar(); })();
 })();
