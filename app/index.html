@@ -1052,18 +1052,32 @@ body.pm-open .tabbar{z-index:60}
 @keyframes pmFade{from{opacity:.55}}
 }
 
+#mFr button{position:relative}
+#mFr button + button::after{content:"";position:absolute;left:-3px;top:24%;bottom:24%;width:1.5px;border-radius:2px;background:color-mix(in srgb,var(--ink) 24%,transparent);transition:opacity .2s}
+#mFr button[aria-pressed="true"]::after,#mFr button[aria-pressed="true"] + button::after{opacity:0}
+#mFr button[data-logo="faf"]::before{width:22px;height:18px;border-radius:0;background:url(assets/faf-emblem.png) center/contain no-repeat}
+#mFr button[data-logo="bm"]::before{width:15px;height:19px;border-radius:0;background:url(assets/bm-emblem.png) center/contain no-repeat}
+#mFr button[aria-pressed="true"][data-logo="faf"]::before{background:url(assets/faf-emblem.png) center/contain no-repeat;box-shadow:none}
+#mFr button[aria-pressed="true"][data-logo="bm"]::before{background:url(assets/bm-emblem.png) center/contain no-repeat;box-shadow:none}
+.mm-seg{display:flex;gap:4px;padding:4px;margin:0 0 12px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow),var(--ring)}
+.mm-seg button{position:relative;flex:1;border:0;background:none;border-radius:12px;padding:10px 6px;font-weight:600;font-size:14px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:background .2s,color .2s}
+.mm-seg button svg{width:17px;height:17px}
+.mm-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
+.mm-seg button + button::after{content:"";position:absolute;left:-3px;top:24%;bottom:24%;width:1.5px;border-radius:2px;background:color-mix(in srgb,var(--ink) 24%,transparent);transition:opacity .2s}
+.mm-seg button[aria-pressed="true"]::after,.mm-seg button[aria-pressed="true"] + button::after{opacity:0}
+
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
 .sair-box{display:flex;justify-content:center;padding:28px 0 12px}
 .sair-b{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--surface);color:var(--muted);font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:14px;box-shadow:var(--ring)}.sair-b svg{width:18px;height:18px}
-.tag.asc{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
+.tag[data-logo="bm"]{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
 .abn.logo{padding:14px 18px}
 .abn.logo-bm{background:linear-gradient(135deg,#0B5E3B,#0E7A4D 70%,#12935C);box-shadow:0 10px 28px -14px rgba(14,122,77,.7)}
 .abn.logo-faf{background:linear-gradient(135deg,#2346C9,#2F5BEA 70%,#4F78F0);box-shadow:0 10px 28px -14px rgba(47,91,234,.7);gap:14px}
 .abn-emb{height:56px;width:auto;display:block;flex:none;margin:0 auto}
 .abn-fn{color:#fff;font:700 18px/1.15 var(--display);letter-spacing:-.01em;text-align:left}
-.tag.fed{background-image:url(assets/faf-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:29px}
+.tag[data-logo="faf"]{background-image:url(assets/faf-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:29px}
 .abn-logo{height:46px;width:auto;max-width:100%;display:block}
 .abn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .abn{position:relative}
@@ -1364,9 +1378,9 @@ body.pm-open .tabbar{z-index:60}
   };
   const icon = n => { const s = document.createElementNS("http://www.w3.org/2000/svg","svg"); s.setAttribute("viewBox","0 0 24 24"); s.setAttribute("class","i"); s.setAttribute("aria-hidden","true"); s.innerHTML = IC[n]; return s; };
   const VIEWS = [["today","Início"],["board","Quadro"],["month","Mês"]];
-  const VIEWS_STAFF = VIEWS;
+  const VIEWS_STAFF = VIEWS.concat([["minhas","Minhas"]]);
   const ADMIN_VIEWS = [["mais","Mais"]];
-  const ALL_VIEWS = VIEWS.concat(ADMIN_VIEWS);
+  const ALL_VIEWS = VIEWS.concat(ADMIN_VIEWS, [["minhas","Minhas"]]);
 
   let items = [], q = "", show = "all", view = "today", pessoa = "", secF = "";
   let db = null, col = null, editing = null, frente = "fed", canWrite = true;
@@ -1442,7 +1456,7 @@ body.pm-open .tabbar{z-index:60}
       sf.append(el("button",{class:"nv","data-fr":k, onclick:()=>setShow(k)},
         k === "all" ? el("span",{class:"sw",style:"background:linear-gradient(90deg,var(--fed) 50%,var(--asc) 50%)"}) : el("span",{class:"sw",style:"background:var(--"+k+")"}),
         l, el("span",{class:"ct","data-ct":k})));
-      mf.append(el("button",{"data-fr":k, onclick:()=>setShow(k)}, l));
+      mf.append(el("button",{"data-fr":k, "data-logo":({fed:"faf", asc:"bm"})[k] || false, onclick:()=>setShow(k)}, l));
     });
   }
   function applyAreas(){
@@ -1533,7 +1547,6 @@ body.pm-open .tabbar{z-index:60}
     const ps = $("#pessoa");
     ps.addEventListener("change", () => {
       pessoa = ps.value;
-      if (role === "staff"){ if (pessoa){ savePrefs(); setMe(pessoa); return; } meNome = ""; saveMe(); notified = null; }
       savePrefs(); render(); });
     $("#icSec").append(icon("predio")); $("#icPes").append(icon("minhas")); $("#icPerf").append(icon("tag"));
     $("#perfF").addEventListener("change", e => { perfF = e.target.value; render(); });
@@ -1574,7 +1587,7 @@ body.pm-open .tabbar{z-index:60}
     $$("#mFr [data-fr]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fr === show)));
     $$("[data-ct]").forEach(s => { const k = s.dataset.ct; s.textContent = items.filter(i => isOpen(i) && (k==="all" || i.frente===k)).length; });
     const t = todayStr();
-    const titles = {today:"Início", board:"Quadro", agenda:"Agenda", month:"Calendário", minhas:"Minhas demandas", escala:"Minha escala", mais:"Mais"};
+    const titles = {today:"Início", board:"Quadro", agenda:"Agenda", month:"Calendário", minhas:"Minhas escalas", escala:"Minha escala", mais:"Mais"};
     document.body.classList.toggle("staff", role === "staff");
     document.body.classList.toggle("v-mais", view === "mais");
     const nUn = meNome ? unseenList().length : 0;
@@ -1592,14 +1605,14 @@ body.pm-open .tabbar{z-index:60}
     $("#mDate b").textContent = dd.getDate();
     $$('[data-act="new"]').forEach(b => b.hidden = !canWrite);
     $$('[data-act="plus"]').forEach(b => b.hidden = !canWrite); if (!canWrite) closePlus();
-    $("#shotBtn").hidden = view !== "today" || (role === "staff" && !!meNome);
+    $("#shotBtn").hidden = view !== "today";
     placeTab();
   }
 
   /* ---------- Resumo ---------- */
   function renderSum(){
     const box = $("#sum"); box.replaceChildren();
-    box.hidden = view !== "today" || (role === "staff" && !!meNome) || (role === "staff" && !frOk());
+    box.hidden = view !== "today" || (role === "staff" && !frOk());
     const t = todayStr(), weekAgo = addDays(t,-7);
     for (const f of areaIds()){
       if (show !== "all" && show !== f) continue;
@@ -1634,7 +1647,7 @@ body.pm-open .tabbar{z-index:60}
       el("span",{class:"tile"}, icon(tipoIcon(it.tipo))),
       el("button",{class:"body", onclick:()=>openDetail(it)},
         el("span",{class:"tt"}, it.titulo),
-        linha(el("span",{class:"tag "+it.frente}, LBL[it.frente]), el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
+        linha(el("span",{class:"tag "+it.frente, "data-logo":({fed:"faf", asc:"bm"})[it.frente] || false}, LBL[it.frente]), el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
         linha(statusChip(it), progEl(it), cmcEl(it), isNew(it) ? el("span",{class:"novo"},"NOVO") : null),
         linha(opts.noDue ? null : dueEl(it), quandoEl(it)),
         linha(avsEl(it))),
@@ -1665,7 +1678,6 @@ body.pm-open .tabbar{z-index:60}
   }
   function renderToday(){
     const v = $("#view"); v.replaceChildren();
-    if (meNome && role === "staff" && !(PERFIS[staffFr] || []).length){ renderMinhas(v); return; }
     const t = todayStr(), tm = addDays(t,1), wk = addDays(t,7);
     const open = items.filter(i => isOpen(i) && inFr(i) && match(i)).sort(order);
     const late = open.filter(isLate), hoje = open.filter(i => i.prazo === t), amanha = open.filter(i => i.prazo === tm);
@@ -1779,6 +1791,7 @@ body.pm-open .tabbar{z-index:60}
     });
     return out;
   }
+  let mesMinhas = false;
   function renderMonth(){
     const v = $("#view"); v.replaceChildren();
     const t = todayStr();
@@ -1792,8 +1805,12 @@ body.pm-open .tabbar{z-index:60}
         el("button",{class:"btn","aria-label":"Mês anterior", onclick:()=>shift(-1)}, icon("left")),
         el("button",{class:"btn", onclick:()=>{ calMonth = t.slice(0,7); calSel = t; renderMonth(); }},"Hoje"),
         el("button",{class:"btn","aria-label":"Próximo mês", onclick:()=>shift(1)}, icon("right")))));
+    if (mesMinhas && !meNome) mesMinhas = false;
+    if (role === "staff") v.append(el("div",{class:"mm-seg", role:"group", "aria-label":"Quais escalas mostrar"},
+      el("button",{type:"button", "aria-pressed":String(!mesMinhas), onclick:() => { mesMinhas = false; renderMonth(); }}, "Todas as escalas"),
+      el("button",{type:"button", "aria-pressed":String(mesMinhas), onclick:() => { if (!meNome){ setView("minhas"); return; } mesMinhas = true; renderMonth(); }}, icon("minhas"), "Minhas escalas")));
     v.append(el("button",{type:"button", class:"shotb", onclick:() => openShot("mes")}, el("span",{class:"sq"}, icon("baixar")), el("span",{class:"tx"}, "Baixar cronograma do mês")));
-    const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) && inFr(i) && match(i)).sort(order);
+    const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) && inFr(i) && match(i) && (!mesMinhas || role !== "staff" || (meNome && team(i).includes(meNome)))).sort(order);
     const grid = el("div",{class:"grid"}, ...["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d => el("div",{class:"wd"},d)));
     for (let i=0;i<off;i++) grid.append(el("div",{class:"cell out","aria-hidden":"true"}));
     for (let d=1; d<=days; d++){
@@ -1819,17 +1836,17 @@ body.pm-open .tabbar{z-index:60}
     }
   }
 
-  function renderView(){ ({today:renderToday, board:renderBoard, agenda:renderAgenda, month:renderMonth, minhas:renderMinhas, escala:renderEscala, mais:renderMais})[view](); if (window.DEMANDO_API && (view === "today" || view === "mais")) $("#view").append(el("div",{class:"sair-box"}, el("button",{type:"button", class:"sair-b", onclick:() => { if (confirm("Sair da conta?")) window.DEMANDO_API.sair(); }}, icon("sair"), "Sair da conta"))); }
+  function renderView(){ ({today:renderToday, board:renderBoard, agenda:renderAgenda, month:renderMonth, minhas:renderMinhasPage, escala:renderEscala, mais:renderMais})[view](); if (window.DEMANDO_API && (view === "today" || view === "mais")) $("#view").append(el("div",{class:"sair-box"}, el("button",{type:"button", class:"sair-b", onclick:() => { if (confirm("Sair da conta?")) window.DEMANDO_API.sair(); }}, icon("sair"), "Sair da conta"))); }
   function render(){
     if (!ALL_VIEWS.some(x => x[0] === view)) view = "today";
     if (role === "staff" && view === "mais") view = "today";
+    if (role !== "staff" && view === "minhas") view = "today";
     const isPick = role === "staff" && !frOk();
     document.body.classList.toggle("picker", isPick);
     $("#backD").hidden = isPick;
     if (role === "staff"){
       if (!frOk()){ $("#meHold").replaceChildren(); $("#areaBanner").hidden = true; syncChrome(); renderSum(); $("#view").replaceChildren(frPicker()); return; }
       if (show !== staffFr){ show = staffFr; fillPessoa(); }
-      if (meNome && pessoa !== meNome && EQUIPES[staffFr].includes(meNome) && !(PERFIS[staffFr] || []).length){ pessoa = meNome; fillPessoa(); }
     }
     $("#meHold").replaceChildren(); renderAreaBanner();
     if (view === "today" && role === "staff" && !meNome && !(PERFIS[staffFr] || []).length && nomesDoUsuario().length) $("#meHold").append(chooser());
@@ -2869,7 +2886,7 @@ body.pm-open .tabbar{z-index:60}
     box.append(el("div",{class:"list dml"}, ...recs.slice().sort((a, b) => a.titulo.localeCompare(b.titulo)).filter(r => areaIds().includes(r.area)).map(r => el("div",{class:"rw dm rec" + (r.ativo ? "" : " off"), style:"--a:var(--" + r.area + ")"},
       el("span",{class:"tile"}, icon(tipoIcon(r.tipo))),
       el("button",{class:"body", onclick:() => openRec(r)}, el("span",{class:"tt"}, r.titulo),
-        el("span",{class:"meta"}, el("span",{class:"tag " + r.area}, LBL[r.area]), el("span",null, r.tipo), el("span",null, descRec(r)))),
+        el("span",{class:"meta"}, el("span",{class:"tag " + r.area, "data-logo":({fed:"faf", asc:"bm"})[r.area] || false}, LBL[r.area]), el("span",null, r.tipo), el("span",null, descRec(r)))),
       el("label",{class:"sw-t", title: r.ativo ? "Ativa" : "Pausada"}, el("input",{type:"checkbox", "aria-label":"Ativa", checked: r.ativo ? "" : false, onchange:e => saveRec(Object.assign({}, r, {ativo:e.target.checked}))}))))));
   }
   async function saveRec(r){
@@ -3448,7 +3465,6 @@ body.pm-open .tabbar{z-index:60}
       const p = JSON.parse(localStorage.getItem("cd-prefs") || "{}");
       if (ALL_VIEWS.some(v => v[0] === p.view)) view = p.view;
       if (p.show === "all" || areaIds().includes(p.show)) show = p.show;
-      if (typeof p.pessoa === "string" && EQUIPE.includes(p.pessoa)) pessoa = p.pessoa;
       if (typeof p.secF === "string" && SEC_NOMES.includes(p.secF)) { secF = p.secF; $("#secF").value = secF; }
       if (Array.isArray(p.collapsed)) collapsed = p.collapsed.filter(x => areaIds().includes(x));
     } catch(e){}
@@ -3487,7 +3503,7 @@ body.pm-open .tabbar{z-index:60}
         el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas"))),
       el("div",{class:"hello-a"},
         ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
-        el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; render(); }}, "Ver todas as demandas")));
+        el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe")));
     return box;
   }
   function nomesDoUsuario(){ const ks = (window.DEMANDO_API && window.DEMANDO_API.areas) || []; const l = Array.from(new Set(ks.flatMap(k => EQUIPES[k] || []))); return l.length ? l : TODOS; }
@@ -3497,11 +3513,12 @@ body.pm-open .tabbar{z-index:60}
     if (nm) guess = nomesDoUsuario().find(n => norm(n) === nm) || "";
     return el("section",{class:"who-pick"},
       el("b",null,"Quem é você?"),
-      el("p",{class:"hint"},"Escolha seu nome pra ver as demandas em que você foi escalado. Isso fica salvo só pra você."),
+      el("p",{class:"hint"},"Escolha seu nome pra ver as suas escalas na aba Minhas e receber o aviso quando te escalarem. As demandas de toda a equipe continuam à vista."),
       el("div",{class:"who-g"}, ...nomesDoUsuario().map(n => el("button",{type:"button", class:"who-b" + (n === guess ? " sug" : ""), onclick:() => setMe(n)},
         el("span",{class:"av " + avColor(n)}, ini(n)), n, n === guess ? el("small",null,"é você?") : null))));
   }
   function pinRow(it){ const r = row(it); r.classList.add("pinned"); r.prepend(el("span",{class:"pin", title:"Nova escala"}, icon("pin"))); return r; }
+  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); if (!meNome){ v.append(chooser()); return; } renderMinhas(v); }
   function renderMinhas(v){
     const t = todayStr(), tm = addDays(t,1), wk = addDays(t,7);
     const mine = mineOf(meNome).filter(match).sort(order), open = mine.filter(isOpen);
@@ -3563,8 +3580,8 @@ body.pm-open .tabbar{z-index:60}
     const list = role === "staff" ? VIEWS_STAFF : VIEWS.concat(ADMIN_VIEWS);
     list.forEach(([k,l]) => {
       const bd = () => el("span",{class:"bdg", "data-bdg":k, hidden:""});
-      sv.append(el("button",{class:"nv","data-view":k, onclick:()=>setView(k)}, icon(k), l, k === "today" ? bd() : null));
-      tb.append(el("button",{"data-view":k, onclick:()=>setView(k)}, el("span",{class:"tbi"}, icon(k), k === "today" ? bd() : null), l));
+      sv.append(el("button",{class:"nv","data-view":k, onclick:()=>setView(k)}, icon(k), l, k === "minhas" ? bd() : null));
+      tb.append(el("button",{"data-view":k, onclick:()=>setView(k)}, el("span",{class:"tbi"}, icon(k), k === "minhas" ? bd() : null), l));
     });
     const pl = el("button",{type:"button", class:"tab-plus", "data-act":"plus", "aria-label":"Criar demanda", "aria-haspopup":"menu", "aria-expanded":"false", onclick:togglePlus}, el("span",{class:"tp-i"}, icon("plus")));
     pl.hidden = !canWrite; tb.insertBefore(pl, tb.children[2] || null);

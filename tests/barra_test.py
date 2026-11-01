@@ -1,4 +1,4 @@
-"""Barra de baixo nova: sem Agenda, + em destaque no meio com 3 opções (nova demanda, por texto, por foto); admin, funcionário, leitor e desktop. App local em http://localhost:8766.
+"""Barra de baixo: sem Agenda, + em destaque no meio com 3 opções; admin, funcionário (5 abas, com Minhas), leitor e desktop. App local em http://localhost:8766.
 Uso: SB=<token> CODIGO_EQUIPE=<código> ADMIN_SENHA=<..> BM_SENHA=<..> FAF_SENHA=<..> python3 tests/barra_test.py"""
 import asyncio, os, json, requests
 from playwright.async_api import async_playwright
@@ -45,13 +45,13 @@ async def main():
         await ctx.close()
       print("\n######## FUNCIONÁRIO DA BM")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); await entra(pg,"bm",CRED["bm"]); g=await pg.evaluate(BAR)
-      chk("abas: Início, Quadro, + (no lugar da Agenda), Mês, sem Mais", g['abas']==['today','board','+','month'], g['abas'])
+      chk("funcionário: Início, Quadro, + (no meio), Mês, Minhas (igual ao admin, sem Mais)", g['abas']==['today','board','+','month','minhas'], g['abas']); chk("funcionário: o '+' fica no CENTRO da barra, igual ao admin", g['dx'] is not None and abs(g['dx'])<=3, g['dx'])
       m=await menu(pg); chk("as 3 opções aparecem pro funcionário", m['itens']==["Nova demanda","Por texto","Por foto"], m['itens']); await pg.keyboard.press("Escape")
       await ctx.close()
       print("\n######## LEITOR (só visualiza)")
       requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Leitor Barra","usuario":"tst.lb","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.lb'")[0]['id']; sql(f"insert into public.acessos values ('{uid}','asc')")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"tst.lb","SenhaForte123"); g=await pg.evaluate(BAR)
-      chk("leitor NÃO tem o '+' (só Início, Quadro, Mês)", g['abas']==['today','board','month'], g['abas']); await ctx.close()
+      chk("leitor NÃO tem o '+' (Início, Quadro, Mês, Minhas)", g['abas']==['today','board','month','minhas'], g['abas']); await ctx.close()
       print("\n######## QUEM TINHA A AGENDA SALVA")
       bm_id=sql("select id from public.pessoas where usuario='bm'")[0]['id']; sql(f"insert into public.preferencias(pessoa_id, dados) values ('{bm_id}', '{{\"view\":\"agenda\"}}'::jsonb) on conflict (pessoa_id) do update set dados='{{\"view\":\"agenda\"}}'::jsonb")
       ctx=await b.new_context(**dev); await ctx.add_init_script(STUB); pg=await ctx.new_page(); await entra(pg,"bm",CRED["bm"]); g=await pg.evaluate(BAR); chk("com a Agenda salva como última tela, abre no Início", g['ativa']=='today', g['ativa']); await ctx.close()

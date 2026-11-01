@@ -46,11 +46,11 @@ async def main():
         chk("com os nomes da equipe DA ÁREA dele (BM) e só", sorted(nomes)==sorted(['Juninho','Leopoldo','Celso','Sara','Arthur','Mauro']), nomes)
         await Bp.screenshot(path="ui2_quem.png")
         await Bp.click(".who-b:has-text('Celso')"); await Bp.wait_for_timeout(2500)
-        chk("escolheu 'Celso': aparece 'Olá, Celso'", "Olá, Celso" in await Bp.inner_text("body"))
+        chk("escolheu 'Celso': o Início segue mostrando a equipe toda (sem 'Olá, Celso')", "Olá, Celso" not in await Bp.inner_text("body")); await Bp.click("#tabbar [data-view=minhas]"); await Bp.wait_for_timeout(900); chk("na aba Minhas aparece 'Olá, Celso'", "Olá, Celso" in await Bp.inner_text("body"))
         chk("o nome ficou guardado no servidor", sql(f"select nome_equipe from public.pessoas where id='{uid}'")[0]['nome_equipe']=='Celso')
         await Bp.screenshot(path="ui2_ola.png")
         C=await (await b.new_context(**dev)).new_page(); await entra(C,"tst.q","SenhaForte123")
-        chk("em OUTRO aparelho: já entra como 'Olá, Celso', sem escolher de novo", "Olá, Celso" in await C.inner_text("body"))
+        await C.click("#tabbar [data-view=minhas]"); await C.wait_for_timeout(900); chk("em OUTRO aparelho: já entra como 'Olá, Celso', sem escolher de novo", "Olá, Celso" in await C.inner_text("body"))
         sql("update public.config_interna set valor = valor || '?simulado=1' where chave='push_url' and valor not like '%simulado%'"); n=sql("select count(*) n from public.push_log")[0]['n']
         sql(f"insert into public.demandas(id, area_id, titulo, tipo, equipe, criado_por) values ('tst-q1','asc','TESTE escala do Celso','Arte','{{Celso}}','{sql(chr(115)+'elect id from public.pessoas where usuario='+chr(39)+'admin'+chr(39))[0]['id']}')")
         for _ in range(20):

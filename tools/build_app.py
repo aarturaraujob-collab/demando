@@ -98,6 +98,46 @@ rep(r"""    tb.style.gridTemplateColumns = "repeat(" + list.length + ", minmax(0
 rep(r"""    $$('[data-act="new"]').forEach(b => b.hidden = !canWrite);""", r"""    $$('[data-act="new"]').forEach(b => b.hidden = !canWrite);
     $$('[data-act="plus"]').forEach(b => b.hidden = !canWrite); if (!canWrite) closePlus();""")
 
+
+# 13) funcionário: o nome escolhido NÃO esconde mais a equipe. Todas as telas mostram tudo; a aba "Minhas" mostra só as escalas dele.
+rep(r"""      if (meNome && pessoa !== meNome && EQUIPES[staffFr].includes(meNome) && !(PERFIS[staffFr] || []).length){ pessoa = meNome; fillPessoa(); }
+""", "")
+rep(r"""      if (role === "staff"){ if (pessoa){ savePrefs(); setMe(pessoa); return; } meNome = ""; saveMe(); notified = null; }
+""", "")
+rep(r"""    if (meNome && role === "staff" && !(PERFIS[staffFr] || []).length){ renderMinhas(v); return; }
+""", "")
+rep(r"""    box.hidden = view !== "today" || (role === "staff" && !!meNome) || (role === "staff" && !frOk());""", r"""    box.hidden = view !== "today" || (role === "staff" && !frOk());""")
+rep(r"""$("#shotBtn").hidden = view !== "today" || (role === "staff" && !!meNome);""", r"""$("#shotBtn").hidden = view !== "today";""")
+rep(r"""      if (typeof p.pessoa === "string" && EQUIPE.includes(p.pessoa)) pessoa = p.pessoa;
+""", "")
+rep(r"""  const VIEWS_STAFF = VIEWS;""", r"""  const VIEWS_STAFF = VIEWS.concat([["minhas","Minhas"]]);""")
+rep(r"""  const ALL_VIEWS = VIEWS.concat(ADMIN_VIEWS);""", r"""  const ALL_VIEWS = VIEWS.concat(ADMIN_VIEWS, [["minhas","Minhas"]]);""")
+rep(r"""    if (role === "staff" && view === "mais") view = "today";""", r"""    if (role === "staff" && view === "mais") view = "today";
+    if (role !== "staff" && view === "minhas") view = "today";""")
+rep(r"""minhas:renderMinhas, escala:renderEscala""", r"""minhas:renderMinhasPage, escala:renderEscala""")
+rep(r"""  function renderMinhas(v){""", r"""  function renderMinhasPage(){ const v = $("#view"); v.replaceChildren(); if (!meNome){ v.append(chooser()); return; } renderMinhas(v); }
+  function renderMinhas(v){""")
+rep(r"""onclick:() => { meNome = ""; saveMe(); notified = null; render(); }}, "Ver todas as demandas")""", r"""onclick:() => setView("today")}, "Ver as demandas de toda a equipe")""")
+rep(r'''minhas:"Minhas demandas"''', r'''minhas:"Minhas escalas"''')
+rep(r"""icon(k), l, k === "today" ? bd() : null));""", r"""icon(k), l, k === "minhas" ? bd() : null));""")
+rep(r"""el("span",{class:"tbi"}, icon(k), k === "today" ? bd() : null), l));""", r"""el("span",{class:"tbi"}, icon(k), k === "minhas" ? bd() : null), l));""")
+rep(r'''"Escolha seu nome pra ver as demandas em que você foi escalado. Isso fica salvo só pra você."''', r'''"Escolha seu nome pra ver as suas escalas na aba Minhas e receber o aviso quando te escalarem. As demandas de toda a equipe continuam à vista."''')
+# mês: alternar entre todas as escalas e só as minhas
+rep(r"""  function renderMonth(){""", r"""  let mesMinhas = false;
+  function renderMonth(){""")
+rep(r"""    v.append(el("button",{type:"button", class:"shotb", onclick:() => openShot("mes")}, el("span",{class:"sq"}, icon("baixar")), el("span",{class:"tx"}, "Baixar cronograma do mês")));""", r"""    if (mesMinhas && !meNome) mesMinhas = false;
+    if (role === "staff") v.append(el("div",{class:"mm-seg", role:"group", "aria-label":"Quais escalas mostrar"},
+      el("button",{type:"button", "aria-pressed":String(!mesMinhas), onclick:() => { mesMinhas = false; renderMonth(); }}, "Todas as escalas"),
+      el("button",{type:"button", "aria-pressed":String(mesMinhas), onclick:() => { if (!meNome){ setView("minhas"); return; } mesMinhas = true; renderMonth(); }}, icon("minhas"), "Minhas escalas")));
+    v.append(el("button",{type:"button", class:"shotb", onclick:() => openShot("mes")}, el("span",{class:"sq"}, icon("baixar")), el("span",{class:"tx"}, "Baixar cronograma do mês")));""")
+rep(r"""const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) && inFr(i) && match(i)).sort(order);""", r"""const vis = items.filter(i => i.prazo && i.prazo.startsWith(calMonth) && inFr(i) && match(i) && (!mesMinhas || role !== "staff" || (meNome && team(i).includes(meNome)))).sort(order);""")
+
+
+# 14) os escudos da FAF/BM são marcados por atributo próprio (data-logo): o app copia pra áreas extras (LIFE) toda regra que cita ".asc"
+rep(r"""el("span",{class:"tag "+it.frente}, LBL[it.frente])""", r"""el("span",{class:"tag "+it.frente, "data-logo":({fed:"faf", asc:"bm"})[it.frente] || false}, LBL[it.frente])""")
+rep(r"""el("span",{class:"tag " + r.area}, LBL[r.area])""", r"""el("span",{class:"tag " + r.area, "data-logo":({fed:"faf", asc:"bm"})[r.area] || false}, LBL[r.area])""")
+rep(r"""mf.append(el("button",{"data-fr":k, onclick:()=>setShow(k)}, l));""", r"""mf.append(el("button",{"data-fr":k, "data-logo":({fed:"faf", asc:"bm"})[k] || false, onclick:()=>setShow(k)}, l));""")
+
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
 
@@ -124,18 +164,33 @@ body.pm-open .tabbar{z-index:60}
 }
 """
 css_extra += """
+#mFr button{position:relative}
+#mFr button + button::after{content:"";position:absolute;left:-3px;top:24%;bottom:24%;width:1.5px;border-radius:2px;background:color-mix(in srgb,var(--ink) 24%,transparent);transition:opacity .2s}
+#mFr button[aria-pressed="true"]::after,#mFr button[aria-pressed="true"] + button::after{opacity:0}
+#mFr button[data-logo="faf"]::before{width:22px;height:18px;border-radius:0;background:url(assets/faf-emblem.png) center/contain no-repeat}
+#mFr button[data-logo="bm"]::before{width:15px;height:19px;border-radius:0;background:url(assets/bm-emblem.png) center/contain no-repeat}
+#mFr button[aria-pressed="true"][data-logo="faf"]::before{background:url(assets/faf-emblem.png) center/contain no-repeat;box-shadow:none}
+#mFr button[aria-pressed="true"][data-logo="bm"]::before{background:url(assets/bm-emblem.png) center/contain no-repeat;box-shadow:none}
+.mm-seg{display:flex;gap:4px;padding:4px;margin:0 0 12px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow),var(--ring)}
+.mm-seg button{position:relative;flex:1;border:0;background:none;border-radius:12px;padding:10px 6px;font-weight:600;font-size:14px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:background .2s,color .2s}
+.mm-seg button svg{width:17px;height:17px}
+.mm-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
+.mm-seg button + button::after{content:"";position:absolute;left:-3px;top:24%;bottom:24%;width:1.5px;border-radius:2px;background:color-mix(in srgb,var(--ink) 24%,transparent);transition:opacity .2s}
+.mm-seg button[aria-pressed="true"]::after,.mm-seg button[aria-pressed="true"] + button::after{opacity:0}
+"""
+css_extra += """
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
 .sair-box{display:flex;justify-content:center;padding:28px 0 12px}
 .sair-b{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--surface);color:var(--muted);font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:14px;box-shadow:var(--ring)}.sair-b svg{width:18px;height:18px}
-.tag.asc{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
+.tag[data-logo="bm"]{background-image:url(assets/bm-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:25px}
 .abn.logo{padding:14px 18px}
 .abn.logo-bm{background:linear-gradient(135deg,#0B5E3B,#0E7A4D 70%,#12935C);box-shadow:0 10px 28px -14px rgba(14,122,77,.7)}
 .abn.logo-faf{background:linear-gradient(135deg,#2346C9,#2F5BEA 70%,#4F78F0);box-shadow:0 10px 28px -14px rgba(47,91,234,.7);gap:14px}
 .abn-emb{height:56px;width:auto;display:block;flex:none;margin:0 auto}
 .abn-fn{color:#fff;font:700 18px/1.15 var(--display);letter-spacing:-.01em;text-align:left}
-.tag.fed{background-image:url(assets/faf-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:29px}
+.tag[data-logo="faf"]{background-image:url(assets/faf-emblem.png);background-repeat:no-repeat;background-position:6px 50%;background-size:auto 14px;padding-left:29px}
 .abn-logo{height:46px;width:auto;max-width:100%;display:block}
 .abn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .abn{position:relative}
