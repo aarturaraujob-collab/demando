@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     demandaId = null;
   } else if (b.tipo === "resumo") {
     const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);   // data em Maceió (UTC-3)
-    const { data: dem } = await sb.from("demandas").select("id, titulo, area_id, equipe, hora").eq("prazo", hoje).not("status", "in", "(Entregue,Postada)").is("arquivada_em", null);
+    const { data: dem } = await sb.from("demandas").select("id, titulo, area_id, equipe, hora").eq("prazo", hoje).not("status", "in", "(Entregue,Postada)").is("arquivada_em", null).is("cancelada_em", null);
     for (const s of subs) {
       const n = nomeDaSub(s); if (!n) continue;
       const p = porId.get(s.pessoa_id)!;
@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
     const monta = (title: string, alvo: Sub[]) => alvo.forEach((s) => envios.push({ sub: s, payload: { title, body: d.titulo + quando, tag: `${b.tipo}-${d.id}`, url: "./" } }));
     if (b.tipo === "nova") monta("Nova escala", alvosSubs(d.equipe ?? [], d.area_id, d.criado_por_nome, d.criado_por));
     else if (b.tipo === "escala") monta("Você foi escalado", alvosSubs(b.novos ?? [], d.area_id));
+    else if (b.tipo === "cancelada") monta("Agenda cancelada", alvosSubs(d.equipe ?? [], d.area_id));
     else if (b.tipo === "direcionamento") monta("Direcionamento novo", alvosSubs(d.equipe ?? [], d.area_id, b.autor_nome, b.autor));
     else return json({ erro: "tipo desconhecido" }, 400);
   }

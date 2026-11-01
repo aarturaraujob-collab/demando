@@ -17,6 +17,7 @@ API.lembrarEu = async nome => { if (!nome || !UID) return; try { if (localStorag
 API.esquecerEu = async () => { if (!UID) return; try { localStorage.setItem(chaveEu(), "-"); } catch(e){} await nomeNoAparelho(null); };
 API.guardarNomeEquipe = API.lembrarEu; API.limparNomeEquipe = API.esquecerEu;
 API.arquivar = async (id, sim) => { try { const agora = new Date().toISOString(), r = await sb.from("demandas").update(sim ? { arquivada_em: agora, desarquivada_em: null } : { arquivada_em: null, desarquivada_em: agora }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
+API.cancelar = async (id, sim) => { try { const r = await sb.from("demandas").update({ cancelada_em: sim ? new Date().toISOString() : null }).eq("id", id).select("id"); return !r.error && !!(r.data && r.data.length); } catch(e){ return false; } };
 
 /* ---------- utilidades ---------- */
 const nz = v => (v === "" || v === undefined || v === null) ? null : v;
@@ -41,7 +42,7 @@ function demPartial(p){ const row = {}; for (const [k, v] of Object.entries(p ||
 const demDe = r => ({ id:r.id, frente:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), prazo:sz(r.prazo), hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local), status:r.status,
   prioridade:r.prioridade, solicitante:sz(r.solicitante), secretaria:sz(r.secretaria), perfil:sz(r.perfil), equipe:r.equipe || [], responsavel:(r.equipe || []).join(", "), link:sz(r.link), obs:sz(r.obs),
   original:sz(r.original), checklist:r.checklist || [], anexos:r.anexos || [], historico:r.historico || [], criado:sz(r.criado), criadoEm:ms(r.criado_em), entregue:sz(r.entregue),
-  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "", criadoPorNome:sz(r.criado_por_nome), arquivadaEm:r.arquivada_em ? ms(r.arquivada_em) : 0 });
+  recorrente:sz(r.recorrente_id), nComent:r.n_coment || 0, criadoPor:r.criado_por || "", criadoPorNome:sz(r.criado_por_nome), arquivadaEm:r.arquivada_em ? ms(r.arquivada_em) : 0, canceladaEm:r.cancelada_em ? ms(r.cancelada_em) : 0 });
 const areaDe = r => r.removida ? null : ({ id:r.id, sigla:r.sigla, nome:r.nome, cor:r.cor, equipe:r.equipe || [], perfis:r.perfis || [], tipos:r.tipos || [], soAdmin:!!r.so_admin, hash:"T", criado:ms(r.criado_em) });
 const areaRow = d => ({ sigla:d.sigla, nome:d.nome, cor:d.cor, equipe:d.equipe || [], perfis:d.perfis || [], tipos:d.tipos || [], so_admin:!!d.soAdmin, removida:false });
 const recDe = r => ({ id:r.id, ativo:r.ativo, area:r.area_id, titulo:r.titulo, tipo:sz(r.tipo), freq:r.freq, dias:r.dias || [], dia:r.dia, hora:r.hora ? String(r.hora).slice(0, 5) : "", local:sz(r.local),

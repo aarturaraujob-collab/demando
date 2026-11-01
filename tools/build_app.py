@@ -233,7 +233,7 @@ rep(r"""  function render(){
       el("div",{class:"mvd-b", tabindex:"-1", autofocus:""},
         el("h2",{class:"mvd-t", id:"whoT"}, "Quem é você?"),
         el("p",null,"Escolha o seu nome. O Demandô lembra neste aparelho e não pergunta de novo. Em “Minhas” aparecem só as suas escalas e você recebe o aviso quando te escalarem. O resto do app continua mostrando a equipe toda."),
-        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { dlg.close(); setMe(n); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
+        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { if (setMe(n) !== false) dlg.close(); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
         el("button",{type:"button", class:"mvd-no", onclick:() => dlg.close()}, "Agora não")));
     dlg.addEventListener("close", () => { if (!meNome){ try { sessionStorage.setItem("cd-pulou", "1"); } catch(e){} } dlg.remove(); });
     document.body.append(dlg); dlg.showModal();
@@ -254,6 +254,54 @@ rep(r"""    if (it.original) b.append(el("div",null, el("p",{class:"sec-l"},"Ped
 # 17) aba Minhas: só quem eu sou. Sem lista de outros nomes ali (o filtro de pessoa continua nas outras telas)
 rep(r"""const who = (pessoa && TODOS.includes(pessoa)) ? pessoa : meNome; if (!who){ v.append(chooser()); return; }""", r"""const who = meNome; if (pessoa){ pessoa = ""; fillPessoa(); } if (!who){ v.append(chooser()); return; }""")
 rep(r"""    document.body.classList.toggle("v-mais", view === "mais");""", r"""    document.body.classList.toggle("v-mais", view === "mais"); document.body.classList.toggle("v-minhas", view === "minhas");""")
+
+
+# 18) Agenda cancelada (marca própria), rodapé da ficha novo, funcionário sem lista de nomes e com nome fixo
+rep(r"""  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada";""", r"""  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada" && !it.canceladaEm;""")
+rep(r"""mine.filter(i => i.status === s && !i.arquivadaEm).sort(order)""", r"""mine.filter(i => i.status === s && !i.arquivadaEm && !i.canceladaEm).sort(order)""")
+rep(r"""mine.filter(i=>i.status===s && !i.arquivadaEm)""", r"""mine.filter(i=>i.status===s && !i.arquivadaEm && !i.canceladaEm)""")
+rep(r"""  const statusChip = it => el("span",{class:"sc " + stKey(it.status)}""", r"""  const statusChip = it => it.canceladaEm ? el("span",{class:"sc canc"}, "Agenda cancelada") : el("span",{class:"sc " + stKey(it.status)}""")
+rep(r"""  const fluxoEl = it => { const cur = STATUS.indexOf(it.status);""", r"""  const fluxoEl = it => { if (it.canceladaEm) return null; const cur = STATUS.indexOf(it.status);""")
+rep(r"""(isOpen(it) ? "" : " done")""", r"""(isOpen(it) ? "" : " done") + (it.canceladaEm ? " canc" : "")""", 2)
+rep(r"""const hasSt = !!(canWrite && next);""", r"""const hasSt = !!(canWrite && next && !it.canceladaEm);""")
+rep(r"""class:"ev "+it.frente+(isOpen(it)?"":" done")""", r"""class:"ev "+it.frente+(isOpen(it)?"":" done")+(it.canceladaEm?" canc":"")""")
+rep(r"""      else v.append(emptyState("Tudo em dia", "Nenhuma entrega pendente nos próximos 7 dias."));
+    }
+  }""", r"""      else v.append(emptyState("Tudo em dia", "Nenhuma entrega pendente nos próximos 7 dias."));
+    }
+    const canc = items.filter(i => i.canceladaEm && !i.arquivadaEm && inFr(i) && match(i) && Date.now() - i.canceladaEm < 14 * 86400000).sort(order);
+    if (canc.length) v.append(group("Agenda cancelada", canc, "canc"));
+  }""")
+rep(r"""const feitas = mine.filter(i => !isOpen(i) && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7));""", r"""const feitas = mine.filter(i => !isOpen(i) && !i.canceladaEm && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7)), canceladas = mine.filter(i => i.canceladaEm && !i.arquivadaEm && Date.now() - i.canceladaEm < 14 * 86400000);""")
+rep(r"""    if (feitas.length) v.append(group("Entregues nos últimos 7 dias", feitas, "done"));""", r"""    if (feitas.length) v.append(group("Entregues nos últimos 7 dias", feitas, "done"));
+    if (canceladas.length) v.append(group("Agenda cancelada", canceladas, "canc"));""")
+# ficha: aviso de cancelada no topo e rodapé novo
+rep(r"""    b.append(el("div",{class:"it-g"}, ...info.map(""", r"""    if (it.canceladaEm) b.append(el("div",{class:"canc-note"}, "Agenda cancelada em " + fmtLong(new Date(it.canceladaEm - 3 * 3600000).toISOString().slice(0,10)) + ". A equipe escalada foi avisada."));
+    b.append(el("div",{class:"it-g"}, ...info.map(""")
+rep(r"""    $("#detDup").hidden = !adm;
+  }""", r"""    $("#detDup").hidden = !adm;
+    const _canc = !!(window.DEMANDO_API && window.DEMANDO_API.cancelar); $("#detCanc").hidden = !(adm && _canc && (it.canceladaEm || isOpen(it)));
+    $("#detCanc").textContent = it.canceladaEm ? "Reativar" : "Cancelar"; $("#detCanc").title = it.canceladaEm ? "Reativar a agenda" : "Marcar a agenda como cancelada";
+    $("#detClose").hidden = !!adm;   // quem pode agir fecha pelo X; quem só olha ganha o botão Fechar
+  }""")
+rep(r"""  $("#detDel").addEventListener("click", () => {""", r"""  $("#detCanc").addEventListener("click", async () => {
+    const it = detItem; if (!it || !window.DEMANDO_API) return;
+    const voltar = !!it.canceladaEm;
+    if (!voltar && !confirm("Marcar esta agenda como cancelada? Quem estava escalado vai receber o aviso.")) return;
+    det.close();
+    if (await window.DEMANDO_API.cancelar(it.id, !voltar)){
+      write(Object.assign({}, it, {historico: hist(it, voltar ? "Agenda reativada" : "Agenda cancelada")}));
+      toast(voltar ? "Agenda reativada" : "Agenda cancelada", () => window.DEMANDO_API.cancelar(it.id, voltar));
+    } else toast("Não deu pra atualizar agora.");
+  });
+  $("#detDel").addEventListener("click", () => {""")
+# funcionário: sem lista de nomes em lugar nenhum, nome fixo (confirma antes) e sem os atalhos "Não sou eu" / "Ver as demandas de toda a equipe"
+rep(r"""document.body.classList.toggle("v-minhas", view === "minhas");""", r"""document.body.classList.toggle("v-minhas", view === "minhas"); document.body.classList.toggle("is-staff", role === "staff");""")
+cut(r"""      el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe"),""", r"""    ] : [el("button",{type:"button", class:"lnk-b", onclick:() => { pessoa = "";""", "")
+rep(r"""  function setMe(nome){
+    meNome = nome;""", r"""  function setMe(nome){
+    if (nome && !confirm("Você é " + nome + "?\n\nDepois de confirmar, este aparelho fica como " + nome + " e não dá pra trocar.")) return false;
+    meNome = nome;""")
 
 # 5) monta a página
 css_extra = "\n.sem-voltar #backTop,.sem-voltar #backD{display:none!important}\n@media (max-width:860px){.mtop .back-top{grid-column:1;grid-row:1}.mtop .brand{grid-column:2;grid-row:1}.mtop .mpage{grid-column:3;grid-row:1}}\n"
@@ -325,6 +373,16 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 }
 """
 css_extra += """
+.rw.canc .tt,.card.canc .tt{text-decoration:line-through;text-decoration-thickness:2px;opacity:.72}
+.sc.canc{background:color-mix(in srgb,#E5484D 15%,transparent);color:#E5484D}
+.ev.canc{text-decoration:line-through;opacity:.6}
+.grp.canc .grp-h h3{color:#E5484D}
+.canc-note{font-weight:700;font-size:14px;line-height:1.35;color:#E5484D;background:color-mix(in srgb,#E5484D 12%,transparent);border-radius:14px;padding:12px 14px;margin:0 0 6px}
+.sh-f{flex-wrap:wrap;row-gap:8px;gap:6px}
+.sh-f .btn,.sh-f .del{font-size:14px;padding-left:11px;padding-right:11px;white-space:nowrap}
+body.is-staff .fsel:has(#pessoa){display:none}
+"""
+css_extra += """
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
@@ -346,6 +404,21 @@ h2 = h2.replace("</style>", css_extra + "</style>", 1)
 _dup = '      <span class="sp"></span>\n      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>'
 assert h2.count(_dup) == 1, "botão Duplicar não encontrado no HTML"
 h2 = h2.replace(_dup, '      <span class="sp"></span>\n      <button type="button" class="btn" id="detArq" hidden>Arquivar</button>\n      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>')
+_rod_old = '''      <button type="button" class="del" id="detDel" hidden>Excluir</button>
+      <span class="sp"></span>
+      <button type="button" class="btn" id="detArq" hidden>Arquivar</button>
+      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>
+      <button type="button" class="btn" id="detClose">Fechar</button>
+      <button type="button" class="btn pri" id="detEdit">Editar</button>'''
+_rod_new = '''      <button type="button" class="del" id="detDel" hidden>Excluir</button>
+      <button type="button" class="btn" id="detArq" hidden>Arquivar</button>
+      <button type="button" class="btn" id="detCanc" hidden>Cancelar</button>
+      <span class="sp"></span>
+      <button type="button" class="btn" id="detDup" hidden>Duplicar</button>
+      <button type="button" class="btn pri" id="detEdit">Editar</button>
+      <button type="button" class="btn" id="detClose" hidden>Fechar</button>'''
+assert h2.count(_rod_old) == 1, h2.count(_rod_old)
+h2 = h2.replace(_rod_old, _rod_new)
 libs = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>\n<script src="config.js"></script>\n<script src="adapter.js"></script>\n'
 h2 = h2.replace('<script type="text/plain" id="appcode">', libs + '<script type="text/plain" id="appcode">', 1)
 pwa_head = '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon-192.png">\n<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Demandô">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n'

@@ -1094,6 +1094,15 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 .app{height:100%;height:100dvh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 }
 
+.rw.canc .tt,.card.canc .tt{text-decoration:line-through;text-decoration-thickness:2px;opacity:.72}
+.sc.canc{background:color-mix(in srgb,#E5484D 15%,transparent);color:#E5484D}
+.ev.canc{text-decoration:line-through;opacity:.6}
+.grp.canc .grp-h h3{color:#E5484D}
+.canc-note{font-weight:700;font-size:14px;line-height:1.35;color:#E5484D;background:color-mix(in srgb,#E5484D 12%,transparent);border-radius:14px;padding:12px 14px;margin:0 0 6px}
+.sh-f{flex-wrap:wrap;row-gap:8px;gap:6px}
+.sh-f .btn,.sh-f .del{font-size:14px;padding-left:11px;padding-right:11px;white-space:nowrap}
+body.is-staff .fsel:has(#pessoa){display:none}
+
 .ax-w{position:relative;border-radius:12px;overflow:hidden}.ax-w.wide{grid-column:1 / -1}.ax-w.wide .ax-chip{padding-right:56px}
 .ax-dl{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;cursor:pointer;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--ink);box-shadow:var(--ring)}
 .ax-w.wide .ax-dl{top:50%;transform:translateY(-50%)}.ax-dl svg{width:17px;height:17px}
@@ -1247,11 +1256,12 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     <div class="sh-b" id="detBody"></div>
     <div class="sh-f">
       <button type="button" class="del" id="detDel" hidden>Excluir</button>
-      <span class="sp"></span>
       <button type="button" class="btn" id="detArq" hidden>Arquivar</button>
+      <button type="button" class="btn" id="detCanc" hidden>Cancelar</button>
+      <span class="sp"></span>
       <button type="button" class="btn" id="detDup" hidden>Duplicar</button>
-      <button type="button" class="btn" id="detClose">Fechar</button>
       <button type="button" class="btn pri" id="detEdit">Editar</button>
+      <button type="button" class="btn" id="detClose" hidden>Fechar</button>
     </div>
   </div>
 </dialog>
@@ -1543,7 +1553,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
       el("span",{class:"avn"}, pessoasTxt(it)));
   }
   const inFr = it => show === "all" || it.frente === show;
-  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada";
+  const isOpen = it => it.status !== "Entregue" && it.status !== "Postada" && !it.canceladaEm;
   const isLate = it => isOpen(it) && it.prazo && it.prazo < todayStr();
   const PO = {Alta:0,"Média":1,Baixa:2};
   const order = (a,b) => { const A = a.prazo||"9999", B = b.prazo||"9999"; if (A !== B) return A < B ? -1 : 1; const ha = a.hora||"99", hb = b.hora||"99"; if (ha !== hb) return ha < hb ? -1 : 1; return (PO[a.prioridade]??1)-(PO[b.prioridade]??1); };
@@ -1619,7 +1629,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     const t = todayStr();
     const titles = {today:"Início", board:"Quadro", agenda:"Agenda", month:"Calendário", minhas:"Minhas escalas", escala:"Minha escala", mais:"Mais"};
     document.body.classList.toggle("staff", role === "staff");
-    document.body.classList.toggle("v-mais", view === "mais"); document.body.classList.toggle("v-minhas", view === "minhas");
+    document.body.classList.toggle("v-mais", view === "mais"); document.body.classList.toggle("v-minhas", view === "minhas"); document.body.classList.toggle("is-staff", role === "staff");
     const nUn = meNome ? unseenList().length : 0;
     $$("[data-bdg]").forEach(b => { b.hidden = !nUn; b.textContent = nUn > 9 ? "9+" : nUn; });
     document.title = (nUn ? "(" + nUn + ") " : "") + "Demandô";
@@ -1666,15 +1676,15 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   const TIPO_IC = [["video","t_video"],["arte","t_arte"],["stories","t_stories"],["post","t_post"],["release","t_release"],["campanha","t_camp"],["patroc","t_pat"],["cobertura","t_cob"]];
   const tipoIcon = t => { const x = norm(t || ""); const f = TIPO_IC.find(([k]) => x.includes(k)); return f ? f[1] : "t_out"; };
   const stKey = st => ({"A fazer":"s0","Em produção":"s1","Ajustes":"s2","Entregue":"s3","Postada":"s4"})[st] || "s0";
-  const statusChip = it => el("span",{class:"sc " + stKey(it.status)}, !isOpen(it) ? icon("check") : el("i",{class:"ring"}), it.status);
+  const statusChip = it => it.canceladaEm ? el("span",{class:"sc canc"}, "Agenda cancelada") : el("span",{class:"sc " + stKey(it.status)}, !isOpen(it) ? icon("check") : el("i",{class:"ring"}), it.status);
   const urgCls = it => isLate(it) ? " late" : (isOpen(it) && it.prazo === todayStr() ? " today" : "");
   const linha = (...xs) => { const k = xs.filter(Boolean); return k.length ? el("span",{class:"meta"}, ...k) : null; };
-  const fluxoEl = it => { const cur = STATUS.indexOf(it.status); return el("span",{class:"flow", role:"img", "aria-label":"Etapa: " + it.status + " (" + (cur + 1) + " de " + STATUS.length + ")"}, ...STATUS.map((s, i) => el("span",{class:"fs " + stKey(s) + (i < cur ? " past" : i === cur ? " cur" : "")}, el("i"), el("b", null, s === "Em produção" ? "Produção" : s)))); };
+  const fluxoEl = it => { if (it.canceladaEm) return null; const cur = STATUS.indexOf(it.status); return el("span",{class:"flow", role:"img", "aria-label":"Etapa: " + it.status + " (" + (cur + 1) + " de " + STATUS.length + ")"}, ...STATUS.map((s, i) => el("span",{class:"fs " + stKey(s) + (i < cur ? " past" : i === cur ? " cur" : "")}, el("i"), el("b", null, s === "Em produção" ? "Produção" : s)))); };
   function row(it, opts){
     opts = opts || {};
     const next = it.status === "A fazer" ? "Em produção" : null;
-    const hasSt = !!(canWrite && next);
-    return el("div",{class:"rw dm" + urgCls(it) + (isOpen(it) ? "" : " done") + (hasSt ? " has-st" : ""), style:"--a:" + areaVar(it)},
+    const hasSt = !!(canWrite && next && !it.canceladaEm);
+    return el("div",{class:"rw dm" + urgCls(it) + (isOpen(it) ? "" : " done") + (it.canceladaEm ? " canc" : "") + (hasSt ? " has-st" : ""), style:"--a:" + areaVar(it)},
       el("span",{class:"tile"}, icon(tipoIcon(it.tipo))),
       el("button",{class:"body", onclick:()=>openDetail(it)},
         el("span",{class:"tt"}, it.titulo),
@@ -1724,13 +1734,15 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
       else if (!items.length) v.append(emptyState("Comece pela primeira demanda", "Cadastre na mão, mande a foto do pedido ou cole o texto. Eu crio os cards sozinho."));
       else v.append(emptyState("Tudo em dia", "Nenhuma entrega pendente nos próximos 7 dias."));
     }
+    const canc = items.filter(i => i.canceladaEm && !i.arquivadaEm && inFr(i) && match(i) && Date.now() - i.canceladaEm < 14 * 86400000).sort(order);
+    if (canc.length) v.append(group("Agenda cancelada", canc, "canc"));
   }
 
   /* ---------- Quadro ---------- */
   let dragId = null;
   function card(it){
     const si = STATUS.indexOf(it.status);
-    const c = el("div",{class:"card dm" + urgCls(it) + (isOpen(it) ? "" : " done"), draggable: canWrite ? "true" : false, "data-id":it.id, style:"--a:" + areaVar(it)},
+    const c = el("div",{class:"card dm" + urgCls(it) + (isOpen(it) ? "" : " done") + (it.canceladaEm ? " canc" : ""), draggable: canWrite ? "true" : false, "data-id":it.id, style:"--a:" + areaVar(it)},
       el("div",{class:"ch"}, el("span",{class:"tile"}, icon(tipoIcon(it.tipo))), el("button",{class:"tt", onclick:()=>openDetail(it)}, it.titulo)),
       el("div",{class:"meta"}, el("span",null, it.tipo || "Outro"), it.frente === "asc" && it.secretaria ? el("span",null, it.secretaria) : null, perfilEl(it)),
       el("div",{class:"meta m2"}, dueEl(it), quandoEl(it), isNew(it) ? el("span",{class:"novo"},"NOVO") : null, progEl(it), cmcEl(it)),
@@ -1754,10 +1766,10 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
           el("span",{class:"chev"}, icon("right")), el("h2",null,LBL[f]), el("span",null, plural(mine.filter(isOpen).length,"em aberto","em aberto") + (closed ? " · toque pra abrir" : ""))));
       const cols = el("div",{class:"cols"});
       for (const s of STATUS){
-        let list = mine.filter(i => i.status === s && !i.arquivadaEm).sort(order);
+        let list = mine.filter(i => i.status === s && !i.arquivadaEm && !i.canceladaEm).sort(order);
         if (s === "Entregue" || s === "Postada") list = list.sort((a,b) => (b.entregue||"").localeCompare(a.entregue||"")).slice(0,40);
         const body = el("div",{class:"col-b"});
-        const c = el("div",{class:"col " + stKey(s)}, el("div",{class:"col-h"}, el("span",{class:"col-t"}, el("i",{class:"sdot"}), s), el("span",{class:"n"}, mine.filter(i=>i.status===s && !i.arquivadaEm).length)), body);
+        const c = el("div",{class:"col " + stKey(s)}, el("div",{class:"col-h"}, el("span",{class:"col-t"}, el("i",{class:"sdot"}), s), el("span",{class:"n"}, mine.filter(i=>i.status===s && !i.arquivadaEm && !i.canceladaEm).length)), body);
         if (!list.length) body.append(el("div",{class:"empty"}, s === "A fazer" ? "Nada novo por aqui." : "Vazio"));
         list.forEach(it => body.append(card(it)));
         c.addEventListener("dragover", e => { const it = items.find(x => x.id === dragId); if (it && it.frente === f){ e.preventDefault(); c.classList.add("over"); } });
@@ -1849,7 +1861,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
       const ds = calMonth+"-"+pad(d), list = vis.filter(i => i.prazo === ds);
       const cell = el("button",{class:"cell"+(ds===t?" today":"")+(ds===calSel?" sel":""), "aria-label": d+", "+plural(list.length,"entrega","entregas"), onclick:()=>{ calSel = ds; renderMonth(); }},
         el("span",{class:"dn"}, d));
-      list.slice(0,3).forEach(it => cell.append(el("span",{class:"ev "+it.frente+(isOpen(it)?"":" done"), style:"--a:" + areaVar(it) + (it.perfil ? ";background:color-mix(in srgb,var(--a) 14%,var(--surface));color:var(--a)" : "")}, it.titulo)));
+      list.slice(0,3).forEach(it => cell.append(el("span",{class:"ev "+it.frente+(isOpen(it)?"":" done")+(it.canceladaEm?" canc":""), style:"--a:" + areaVar(it) + (it.perfil ? ";background:color-mix(in srgb,var(--a) 14%,var(--surface));color:var(--a)" : "")}, it.titulo)));
       if (list.length > 3) cell.append(el("span",{class:"ev more"}, "+"+(list.length-3)));
       if (list.length){ const dots = el("span",{class:"dots"}); list.slice(0,6).forEach(it => dots.append(el("i",{class:it.frente + (isLate(it) ? " late" : ""), style: it.perfil ? "background:" + areaVar(it) : false}))); cell.append(dots); }
       grid.append(cell);
@@ -1878,7 +1890,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
       el("div",{class:"mvd-b", tabindex:"-1", autofocus:""},
         el("h2",{class:"mvd-t", id:"whoT"}, "Quem é você?"),
         el("p",null,"Escolha o seu nome. O Demandô lembra neste aparelho e não pergunta de novo. Em “Minhas” aparecem só as suas escalas e você recebe o aviso quando te escalarem. O resto do app continua mostrando a equipe toda."),
-        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { dlg.close(); setMe(n); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
+        el("div",{class:"who-g"}, ...nomes.map(n => el("button",{type:"button", class:"who-b", onclick:() => { if (setMe(n) !== false) dlg.close(); }}, el("span",{class:"av " + avColor(n)}, ini(n)), n))),
         el("button",{type:"button", class:"mvd-no", onclick:() => dlg.close()}, "Agora não")));
     dlg.addEventListener("close", () => { if (!meNome){ try { sessionStorage.setItem("cd-pulou", "1"); } catch(e){} } dlg.remove(); });
     document.body.append(dlg); dlg.showModal();
@@ -2018,6 +2030,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     if (it.criado) info.push(["month","Criada em", fmt(it.criado)]);
     if (it.entregue) info.push(["check","Entregue em", fmt(it.entregue)]);
     if (!canWrite) info.push(["mais","Etapa", it.status]);
+    if (it.canceladaEm) b.append(el("div",{class:"canc-note"}, "Agenda cancelada em " + fmtLong(new Date(it.canceladaEm - 3 * 3600000).toISOString().slice(0,10)) + ". A equipe escalada foi avisada."));
     b.append(el("div",{class:"it-g"}, ...info.map(([ic, k, v]) => infoTile(ic, k, v))));
     const t = team(it);
     b.append(el("div",null, el("p",{class:"sec-l"},"Equipe"),
@@ -2054,6 +2067,9 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     $("#detDel").hidden = !adm;
     const _arq = !!(window.DEMANDO_API && window.DEMANDO_API.arquivar); $("#detArq").hidden = !(adm && _arq && (it.arquivadaEm || !isOpen(it))); $("#detArq").textContent = it.arquivadaEm ? "Desarquivar" : "Arquivar";
     $("#detDup").hidden = !adm;
+    const _canc = !!(window.DEMANDO_API && window.DEMANDO_API.cancelar); $("#detCanc").hidden = !(adm && _canc && (it.canceladaEm || isOpen(it)));
+    $("#detCanc").textContent = it.canceladaEm ? "Reativar" : "Cancelar"; $("#detCanc").title = it.canceladaEm ? "Reativar a agenda" : "Marcar a agenda como cancelada";
+    $("#detClose").hidden = !!adm;   // quem pode agir fecha pelo X; quem só olha ganha o botão Fechar
   }
   function renderDetailIfOpen(){ if (det.open && detItem) renderDetail(); }
   $("#detX").addEventListener("click", () => det.close());
@@ -2078,6 +2094,16 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     det.close();
     if (await window.DEMANDO_API.arquivar(it.id, !voltar)) toast(voltar ? "Demanda desarquivada" : "Demanda arquivada", () => window.DEMANDO_API.arquivar(it.id, voltar));
     else toast(voltar ? "Não deu pra desarquivar agora." : "Não deu pra arquivar agora.");
+  });
+  $("#detCanc").addEventListener("click", async () => {
+    const it = detItem; if (!it || !window.DEMANDO_API) return;
+    const voltar = !!it.canceladaEm;
+    if (!voltar && !confirm("Marcar esta agenda como cancelada? Quem estava escalado vai receber o aviso.")) return;
+    det.close();
+    if (await window.DEMANDO_API.cancelar(it.id, !voltar)){
+      write(Object.assign({}, it, {historico: hist(it, voltar ? "Agenda reativada" : "Agenda cancelada")}));
+      toast(voltar ? "Agenda reativada" : "Agenda cancelada", () => window.DEMANDO_API.cancelar(it.id, voltar));
+    } else toast("Não deu pra atualizar agora.");
   });
   $("#detDel").addEventListener("click", () => {
     const it = detItem; if (!it) return;
@@ -3542,6 +3568,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   const unseenList = () => mineOf(meNome).filter(i => isOpen(i) && naoVisto(i) && (role !== "staff" || !staffFr || i.frente === staffFr));
   function markSeen(it){ if (meNome && team(it).includes(meNome) && naoVisto(it)){ vistos.add(it.id); if (it.ajusteEm) vistos.add(it.id + "@" + it.ajusteEm); saveMe(); syncChrome(); if (view === "today") renderView(); } }
   function setMe(nome){
+    if (nome && !confirm("Você é " + nome + "?\n\nDepois de confirmar, este aparelho fica como " + nome + " e não dá pra trocar.")) return false;
     meNome = nome;
     // o que já existia antes de entrar conta como visto, menos o que chegou nas últimas 48h
     mineOf(nome).forEach(i => { if (!(i.criadoEm && Date.now() - i.criadoEm < 172800000)) vistos.add(i.id); });
@@ -3554,8 +3581,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     stats.push(el("div",{class:"hs"}, el("b",null, open.filter(i => i.prazo === todayStr()).length), el("span",null,"Para hoje")), el("div",{class:"hs"}, el("b",null, open.filter(isLate).length), el("span",null,"Atrasadas")));
     const acoes = eu ? [
       ("Notification" in window && Notification.permission === "default") ? el("button",{type:"button", class:"btn", onclick:e => { const s = document.getElementById("sino"); if (s) s.click(); e.currentTarget.remove(); }}, icon("bell"), "Ativar alertas") : null,
-      el("button",{type:"button", class:"lnk-b", onclick:() => setView("today")}, "Ver as demandas de toda a equipe"),
-      el("button",{type:"button", class:"lnk-b", onclick:() => { meNome = ""; saveMe(); notified = null; if (window.DEMANDO_API) window.DEMANDO_API.limparNomeEquipe(); try { sessionStorage.removeItem("cd-pulou"); } catch(e){} render(); }}, "Não sou eu")
     ] : [el("button",{type:"button", class:"lnk-b", onclick:() => { pessoa = ""; fillPessoa(); savePrefs(); render(); }}, "Voltar às minhas escalas")];
     return el("section",{class:"hello"},
       el("div",{class:"hello-t"}, el("span",{class:"hello-av av " + avColor(who)}, ini(who)),
@@ -3596,8 +3621,9 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
     if (sem.length) v.append(group("Próximos 7 dias", sem));
     if (dep.length) v.append(group("Mais pra frente", dep));
     if (sp.length) v.append(group("Sem prazo", sp));
-    const feitas = mine.filter(i => !isOpen(i) && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7));
+    const feitas = mine.filter(i => !isOpen(i) && !i.canceladaEm && !i.arquivadaEm && (i.entregue || "") >= addDays(t,-7)), canceladas = mine.filter(i => i.canceladaEm && !i.arquivadaEm && Date.now() - i.canceladaEm < 14 * 86400000);
     if (feitas.length) v.append(group("Entregues nos últimos 7 dias", feitas, "done"));
+    if (canceladas.length) v.append(group("Agenda cancelada", canceladas, "canc"));
     if (!open.length && !feitas.length) v.append(el("div",{class:"empty-st"}, el("b",null,"Tudo tranquilo"), "Quando te escalarem numa demanda, ela aparece aqui com um pino de atenção."));
   }
   function renderEscala(){
@@ -3993,6 +4019,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 })();
 </script>
 <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
-<script>window.__BUILD="85795da548";</script>
+<script>window.__BUILD="eb168efe65";</script>
 </body>
 </html>

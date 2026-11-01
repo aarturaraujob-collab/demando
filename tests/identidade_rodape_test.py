@@ -1,4 +1,4 @@
-"""Nome só uma vez POR APARELHO, \"Não sou eu\", filtro de pessoa só pra olhar, rodapé fixo ao rolar. App local em http://localhost:8766.
+"""Nome só uma vez POR APARELHO, nome fixo (sem \"Não sou eu\"), sem lista de nomes pro funcionário, rodapé fixo ao rolar. App local em http://localhost:8766.
 Uso: TZ=America/Maceio SB=<token> ADMIN_SENHA=<..> CODIGO_EQUIPE=<..> python3 tests/identidade_rodape_test.py"""
 import asyncio, os, time, requests
 from playwright.async_api import async_playwright
@@ -40,19 +40,9 @@ async def main():
       await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(500); await pg.evaluate(APP_SCROLL,'fim'); await pg.wait_for_timeout(400); await pg.click(".sair-b"); await pg.wait_for_selector("#g-usuario", timeout=15000)
       await entra(pg,"tst.id","SenhaForte123"); chk("saiu da conta e entrou de novo neste aparelho: NÃO pergunta de novo", await pg.locator("#meHold .who-pick").count()==0)
       t=await ola(pg); chk("continua 'Olá, Celso'", "Olá, Celso" in t, t)
-      await pg.click("#view .hello-a .lnk-b:has-text('Não sou eu')"); await pg.wait_for_timeout(1000)
-      chk("'Não sou eu' mostra a escolha de novo", await pg.locator("#view .who-pick").count()==1 or await pg.evaluate("!!document.getElementById('whoDlg')"))
-      await pg.evaluate("(()=>{const d=document.getElementById('whoDlg'); if(d && d.open) d.close()})()"); await pg.wait_for_timeout(400)
-      await pg.click(".who-b:has-text('Sara')"); await pg.wait_for_timeout(1200); chk("escolhendo 'Sara', ela vira o nome deste aparelho", (await eu(pg))=="Sara")
-      print("== filtro de pessoa: só pra olhar, não muda quem eu sou")
-      await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(800); await pg.select_option("#pessoa","Juninho"); await pg.wait_for_timeout(900)
-      linhas=await pg.evaluate("[...document.querySelectorAll('#view .rw')].map(r=>((r.querySelector('.avs')||{}).innerText||''))"); chk("escolher 'Juninho' no filtro mostra só as demandas dele", len(linhas)>0 and all('Juninho' in x for x in linhas), len(linhas))
-      t=await ola(pg); chk("na aba Minhas aparece só quem eu sou ('Olá, Sara'), mesmo com 'Juninho' marcado no filtro", "Olá, Sara" in t and "Escalas de" not in t, t)
-      chk("na aba Minhas a lista de nomes (filtro de pessoa) NÃO aparece", not await pg.locator("#pessoa").is_visible() and await pg.evaluate("document.querySelector('#pessoa').value===''"))
-      chk("quem eu sou continua sendo a Sara (neste aparelho)", (await eu(pg))=="Sara")
-      await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(700); chk("de volta ao Início o filtro de pessoa reaparece, em 'Toda a equipe'", await pg.locator("#pessoa").is_visible() and await pg.evaluate("document.querySelector('#pessoa').value===''"))
-      await pg.select_option("#pessoa","Juninho"); await pg.reload(); await pg.wait_for_selector("#tabbar", state="visible", timeout=30000); await pg.wait_for_timeout(2500)
-      chk("o filtro NÃO fica gravado: ao recarregar volta pra 'Toda a equipe'", await pg.evaluate("document.querySelector('#pessoa').value===''")); await ctx.close()
+      links=await pg.evaluate("[...document.querySelectorAll('#view .hello .lnk-b')].map(x=>x.textContent.trim())"); chk("em Minhas não existe 'Não sou eu' (o nome é fixo neste aparelho)", links==[], links)
+      await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(700); chk("funcionário: sem a lista de nomes (filtro de pessoa) no Início", not await pg.locator("#pessoa").is_visible())
+      chk("quem eu sou continua sendo o Celso (neste aparelho)", (await eu(pg))=="Celso"); await ctx.close()
       print("\n######## RODAPÉ FIXO (admin)")
       for nome,eng,d in (("iPhone",p.webkit,dev),("Android",p.chromium,p.devices['Pixel 7'])):
         bb=b if nome=="iPhone" else await p.chromium.launch(); cx=await bb.new_context(**d); await cx.add_init_script(STUB); pq=await cx.new_page(); await entra(pq,"admin",ADMIN)

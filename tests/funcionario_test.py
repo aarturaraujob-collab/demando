@@ -20,7 +20,7 @@ async def main():
     uid_fx=cria_func("tst.fx")   # conta descartável: nunca mexe na conta bm
     try:
       print("######## FUNCIONÁRIO DA BM · aparelho que tinha o filtro 'Juninho' gravado")
-      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB+"localStorage.setItem('cd-prefs', JSON.stringify({view:'today', show:'asc', pessoa:'Juninho'}));"); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
+      ctx=await b.new_context(**dev); await ctx.add_init_script(STUB+"localStorage.setItem('cd-prefs', JSON.stringify({view:'today', show:'asc', pessoa:'Juninho'}));"); pg=await ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: asyncio.ensure_future(d.accept()))
       await entra(pg,"tst.fx","SenhaForte123")
       chk("o filtro 'Juninho' gravado no aparelho NÃO volta (começa em 'Toda a equipe')", await pg.evaluate("document.querySelector('#pessoa').value===''"))
       chk("sem nome escolhido, o cartão 'Quem é você?' aparece e a lista é a da equipe toda", await pg.locator("#meHold .who-pick").count()==1 and (await pg.evaluate(LINHAS,"Juninho"))['semEle']>0)
@@ -35,8 +35,9 @@ async def main():
       await pg.click("#tabbar [data-view=minhas]"); await pg.wait_for_timeout(1200); M=await pg.evaluate(LINHAS,"Juninho")
       chk("'Minhas' mostra só as escalas do Juninho (nenhuma de outra pessoa)", M['total']>0 and M['semEle']==0, M)
       chk("com o 'Olá, Juninho' e os números dele", "Olá, Juninho" in await pg.inner_text("#view")); await pg.screenshot(path="func_minhas.png")
-      await pg.click("#view .hello-a .lnk-b"); await pg.wait_for_timeout(1000)
-      chk("'Ver as demandas de toda a equipe' volta pro Início, sem perder quem eu sou", await pg.evaluate("document.querySelector('#tabbar [aria-current=true]').dataset.view")=="today" and (await pg.evaluate(LINHAS,"Juninho"))['semEle']>0)
+      chk("em Minhas não há atalhos ('Não sou eu', 'Ver as demandas de toda a equipe'): a navegação é pela barra de baixo", await pg.locator("#view .hello .lnk-b").count()==0)
+      await pg.click("#tabbar [data-view=today]"); await pg.wait_for_timeout(1000)
+      chk("voltando pelo Início, a equipe toda continua à vista (sem perder quem eu sou)", (await pg.evaluate(LINHAS,"Juninho"))['semEle']>0)
       print("== MÊS")
       await pg.click("#tabbar [data-view=month]"); await pg.wait_for_timeout(1200)
       T=await pg.evaluate("(()=>{const bs=[...document.querySelectorAll('#view .mm-seg button')]; return {botoes: bs.map(x=>x.textContent.trim()), pressed: bs.map(x=>x.getAttribute('aria-pressed')), eventos: document.querySelectorAll('#view .cell .ev:not(.more)').length}})()")

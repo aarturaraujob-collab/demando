@@ -40,7 +40,7 @@ async def main():
         requests.post(f"{BASE}/functions/v1/criar-perfil", json={"codigo":CODIGO,"nome":"Fulano Qualquer","usuario":"tst.q","senha":"SenhaForte123"}); uid=sql("select id from public.pessoas where usuario='tst.q'")[0]['id']
         sql(f"update public.pessoas set papel='membro' where id='{uid}'"); sql(f"insert into public.acessos values ('{uid}','asc')")
         sql(f"insert into public.push_subs(pessoa_id, endpoint, p256dh, auth) values ('{uid}','https://push.example.invalid/q','BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U','tBHItJI5svbpez7KI4CCXg')")
-        Bp=await (await b.new_context(**dev)).new_page(); Bp.on("pageerror", lambda e: errs.append(str(e))); await entra(Bp,"tst.q","SenhaForte123")
+        Bp=await (await b.new_context(**dev)).new_page(); Bp.on("pageerror", lambda e: errs.append(str(e))); Bp.on("dialog", lambda d: asyncio.ensure_future(d.accept())); await entra(Bp,"tst.q","SenhaForte123")
         chk("funcionário vê o cartão 'Quem é você?' logo no topo (antes do resumo)", await Bp.evaluate("(()=>{const c=document.querySelector('#meHold .who-pick'), s=document.querySelector('#sum'); return !!c && c.getBoundingClientRect().top < s.getBoundingClientRect().top + 1})()"))
         nomes=await Bp.evaluate("[...document.querySelectorAll('.who-b')].map(b=>b.textContent.replace('é você?','').trim().slice(1))")
         chk("com os nomes da equipe DA ÁREA dele (BM) e só", sorted(nomes)==sorted(['Juninho','Leopoldo','Celso','Sara','Arthur','Mauro']), nomes)
