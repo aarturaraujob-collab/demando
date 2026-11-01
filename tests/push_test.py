@@ -9,6 +9,7 @@ keys=requests.get(f"https://api.supabase.com/v1/projects/{REF}/api-keys?reveal=t
 SV={"apikey":SERVICE,"Authorization":"Bearer "+SERVICE}; V={"push_secret": os.environ.get("PUSH_SECRET","")}; CODIGO=os.environ["CODIGO_EQUIPE"]
 b64u=lambda b: base64.urlsafe_b64encode(b).rstrip(b'=').decode(); FN=f"{BASE}/functions/v1/enviar-push"
 res=[]
+meus=lambda r: [i for i in (r.get('itens') or []) if 'push.example.invalid' in str(i.get('endpoint',''))]
 def chk(n,c,d=""): res.append(bool(c)); print(("  ✅ " if c else "  ❌ ")+n+(" — "+str(d)[:130] if d else ""))
 def espera(n_antes, s=10):
     for _ in range(s*2):
@@ -65,9 +66,9 @@ try:
     ins("p6","asc",["Celso"], prazo=hoje, por=uid); ins("p7","asc",["Celso"], prazo=hoje, status="Entregue", por=uid); ins("p8","asc",["Mauro"], prazo=hoje, por=uid)
     time.sleep(3); n=sql("select count(*) n from public.push_log")[0]['n']
     rr=requests.post(FN+"?simulado=1", headers={"x-push-secret":V['push_secret']}, json={"tipo":"resumo"}).json()
-    chk("resumo: avisa quem tem demanda aberta pra hoje (e só as abertas)", rr.get('destinatarios')==1 and rr['itens'][0]['titulo'].startswith('Hoje: 1 demanda'), rr.get('itens'))
+    chk("resumo: avisa quem tem demanda aberta pra hoje (e só as abertas)", len(meus(rr))==1 and meus(rr)[0]['titulo'].startswith('Hoje: 1 demanda'), meus(rr))
     sql(f"update public.pessoas set ativo=false where id='{uid}'"); rr=requests.post(FN+"?simulado=1", headers={"x-push-secret":V['push_secret']}, json={"tipo":"resumo"}).json()
-    chk("pessoa desativada NÃO recebe", rr.get('destinatarios')==0, rr)
+    chk("pessoa desativada NÃO recebe", len(meus(rr))==0, meus(rr))
     print("== AGENDA")
     chk("tarefas diárias agendadas (arquivar 5h30, recorrentes 5h e resumo 8h de Maceió)", [x['jobname'] for x in sql("select jobname from cron.job order by 1")]==['demando-arquivar','demando-recorrentes','demando-resumo'])
 finally:
