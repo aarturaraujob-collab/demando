@@ -74,7 +74,7 @@ async def main():
       await pgu.wait_for_timeout(8000); chk("e não entra em laço de recarregar", len(navs)-n0==1, {"recargas":len(navs)-n0})
       print("\n######## AVISOS VÃO PRO APARELHO CERTO (função, em ensaio)")
       def chamar(corpo): return requests.post(FN+"?simulado=1", headers=SEG, json=corpo).json()
-      nomes_de=lambda r: sorted(str(i.get('nome') or ('ERRO:'+str(i.get('erro')))) for i in (r.get('itens') or []))
+      nomes_de=lambda r: sorted(str(i.get('nome') or ('ERRO:'+str(i.get('erro')))) for i in (r.get('itens') or []) if 'push.example.invalid' in str(i.get('endpoint','')) or i.get('erro'))   # só os aparelhos de mentirinha do teste (há um aparelho real registrado)
       def dem(i, equipe, **kw):
           sql(f"delete from public.demandas where id='{i}'"); cols={"id":i,"area_id":"asc","titulo":"TST-"+i,"equipe":"{"+",".join(equipe)+"}","criado_em":"2026-01-01T12:00:00+00:00",**kw}
           sql("insert into public.demandas(%s) values (%s)" % (",".join(cols), ",".join("'"+str(v)+"'" for v in cols.values())))
